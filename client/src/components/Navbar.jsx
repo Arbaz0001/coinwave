@@ -1,0 +1,68 @@
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import logo from "../assets/logo.png";
+import { MessageCircle, Home, RefreshCcw, User } from "lucide-react"; // icons
+
+export default function Navbar() {
+  const location = useLocation();
+
+  return (
+    <>
+      {/* Top Navbar */}
+      <nav className="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+        <div className="container mx-auto px-2 py-[2px] flex items-center justify-between">
+          {/* Left Logo + Brand */}
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="logo" className="h-10 w-10 object-contain" />
+            <Link to="/" className="text-xl font-bold">
+              coinwave
+            </Link>
+          </div>
+
+          {/* Right Chatbot Icon */}
+          <button className="p-2 rounded-full hover:bg-gray-100">
+            <MessageCircle className="w-6 h-6 text-gray-700" />
+          </button>
+        </div>
+      </nav>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-md flex justify-around py-[2px] z-50">
+        <Link
+          to="/"
+          className={`flex flex-col items-center text-sm ${
+            location.pathname === "/" ? "text-blue-600" : "text-gray-600"
+          }`}
+        >
+          <Home className="w-5 h-5" />
+          <span>Home</span>
+        </Link>
+
+        <Link
+          to="/exchange"
+          className={`flex flex-col items-center text-sm ${
+            location.pathname === "/exchange" ? "text-blue-600" : "text-gray-600"
+          }`}
+        >
+          <RefreshCcw className="w-5 h-5" />
+          <span>Exchange</span>
+        </Link>
+
+        <Link
+          to="/mine"
+          className={`flex flex-col items-center text-sm ${
+            location.pathname === "/mine" ? "text-blue-600" : "text-gray-600"
+          }`}
+        >
+          <User className="w-5 h-5" />
+          <span>Mine</span>
+        </Link>
+      </div>
+
+      {/* Padding for fixed navbars */}
+      <div className="pt-[16px] pb-[16px]">
+        {/* Adjust these px according to your top & bottom navbar height */}
+      </div>
+    </>
+  );
+}
