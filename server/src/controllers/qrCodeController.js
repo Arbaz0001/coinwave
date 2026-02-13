@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import QRCode from "../models/QRCode.js";
+import QrCode from "../models/QrCode.js";
 
 const BASE_PATH = "/api/uploads"; // consistent with your .env: VITE_API_URL=http://localhost:5000/api
 
