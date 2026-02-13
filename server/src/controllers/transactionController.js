@@ -1,5 +1,5 @@
 import Transaction from "../models/Transaction.js";
-import User from "../models/user.js";
+import User from "../models/User.js";
 
 // Get transactions (paginated + filters)
 export const getTransactions = async (req, res) => {

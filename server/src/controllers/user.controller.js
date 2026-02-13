@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiError } from "../utils/apiError.js";
 import { generateOTP, sendEmail } from "../utils/otpService.js";
-import  User  from "../models/user.js";
+import  User  from "../models/User.js";
 import { otpLogs } from "../models/otpLogs.model.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";

@@ -1,6 +1,6 @@
 import Withdrawal from "../models/Withdraw.js";
 import Notification from "../models/Notification.js";
-import Usermodel from "../models/user.js";
+import Usermodel from "../models/User.js";
 import Coupon from "../models/Coupon.js";
 
 // Get pending withdrawals
