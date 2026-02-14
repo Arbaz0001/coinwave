@@ -56,7 +56,7 @@ app.get("/api/uploads/:filename", (req, res) => {
 // ✅ Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"], // user + admin frontends
+    origin: ["http://localhost:5173", "http://localhost:5174", "https://admin.coinpay0.com","https://api.coinpay0.com","https://coinpay0.com"], // user + admin frontends
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE"],

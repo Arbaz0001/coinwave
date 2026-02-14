@@ -1,5 +1,5 @@
 import axios from "axios";
-import { jwtDecode } from 'jwt-decode'; // ✅ correct named import
+import { jwtDecode } from "jwt-decode";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -9,14 +9,13 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(async (config) => {
   let token = localStorage.getItem("accessToken");
 
-  // Check if expired
   if (token && isTokenExpired(token)) {
     const refreshed = await refreshAccessToken();
     if (refreshed) token = refreshed;
   }
 
   if (token) {
-    config.headers.Authorization = `${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
@@ -24,7 +23,8 @@ axiosInstance.interceptors.request.use(async (config) => {
 
 export default axiosInstance;
 
-// Helper function
+// ------------------ Helpers ------------------
+
 function isTokenExpired(token) {
   try {
     const decoded = jwtDecode(token);
@@ -34,17 +34,20 @@ function isTokenExpired(token) {
   }
 }
 
-// Refresh Function
 async function refreshAccessToken() {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/users/refresh-token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/auth/refresh`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      }
+    );
 
     const data = await response.json();
-    const { accessToken } = data.data;
+    const { accessToken } = data;
+
     localStorage.setItem("accessToken", accessToken);
     return accessToken;
   } catch (err) {

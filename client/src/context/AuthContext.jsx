@@ -34,26 +34,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (data) => {
-    try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, data);
-      const { accessToken, refreshToken, user } = res.data;
+ const login = async (data) => {
+  try {
+    const res = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth/login`,
+      data
+    );
 
-      const newAuth = { user, accessToken, refreshToken };
-      setAuth(newAuth);
+    const { accessToken, refreshToken, user } = res.data;
 
-      // ✅ Save for global + Deposit.jsx compatibility
-      localStorage.setItem("auth", JSON.stringify(newAuth));
-      localStorage.setItem("cw_user", JSON.stringify(user));
-      localStorage.setItem("user_token", accessToken);
+    const newAuth = { user, accessToken, refreshToken };
+    setAuth(newAuth);
 
-      console.log("✅ User stored successfully:", user);
-      return newAuth;
-    } catch (err) {
-      console.error("❌ Login error:", err.response?.data || err.message);
-      throw err;
-    }
-  };
+    localStorage.setItem("auth", JSON.stringify(newAuth));
+    localStorage.setItem("cw_user", JSON.stringify(user));
+    localStorage.setItem("user_token", accessToken);
+    localStorage.setItem("accessToken", accessToken); // for interceptor
+
+    console.log("✅ User stored successfully:", user);
+
+    return newAuth;
+  } catch (err) {
+    console.error("❌ Login error:", err.response?.data || err.message);
+    throw err;
+  }
+};
+
 
   const logout = () => {
     setAuth({ user: null, accessToken: null, refreshToken: null });

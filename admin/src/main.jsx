@@ -9,16 +9,13 @@ import { AdminAuthProvider } from "./context/AdminAuthContext.jsx";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AdminAuthProvider>
-      <BrowserRouter basename="/admin">
+      <BrowserRouter>
         <Routes>
 
-          {/* Default when visiting /admin */}
           <Route path="/" element={<Navigate to="/login" replace />} />
 
-          {/* Login page -> /admin/login */}
           <Route path="/login" element={<AdminLogin />} />
 
-          {/* All other admin routes */}
           <Route path="/*" element={<App />} />
 
         </Routes>
@@ -26,3 +23,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </AdminAuthProvider>
   </React.StrictMode>
 );
+

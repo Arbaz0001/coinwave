@@ -2,101 +2,56 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api", // keep root as you wanted
+  baseURL:
+    import.meta.env.VITE_API_URL || "http://localhost:5000",
   withCredentials: true,
 });
 
-// Safe token extractor (handles plain string or { accessToken } object)
+// ----------------- TOKEN HELPER -----------------
 const getAdminToken = () => {
-  try {
-    const raw =
-      localStorage.getItem("adminAuth") ||
-      localStorage.getItem("admin_token") ||
-      localStorage.getItem("cw_admin") ||
-      null;
-    if (!raw) return null;
+  const raw = localStorage.getItem("adminAuth");
+  if (!raw) return null;
 
-    // try parse JSON, fallback to string
-    try {
-      const parsed = JSON.parse(raw);
-      return (
-        parsed?.accessToken ??
-        parsed?.token ??
-        parsed?.access_token ??
-        parsed?.adminToken ??
-        parsed?.tokenString ??
-        null
-      );
-    } catch {
-      // raw might be plain token string
-      return raw;
-    }
-  } catch (e) {
-    console.warn("Error reading admin token:", e);
-    return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed?.accessToken || null;
+  } catch {
+    return raw;
   }
 };
 
-// Attach token automatically for admin routes
+// ----------------- INTERCEPTOR -----------------
 API.interceptors.request.use((config) => {
-  try {
-    const token = getAdminToken();
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  } catch (err) {
-    console.warn("Interceptor error:", err);
+  const token = getAdminToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// ----------------- Admin API calls -----------------
-
-// Admin login (POST /api/admin/login)
+// ----------------- ADMIN LOGIN -----------------
 export const loginAdmin = async ({ identifier, password }) => {
-  try {
-    // Note: posting to /admin/login (mounted at /api/admin/login)
-    const { data } = await API.post("/admin/login", { identifier, password });
-    // Return the raw data object (caller will handle saving)
-    return data;
-  } catch (err) {
-    console.error("Admin login error:", err.response?.data || err.message);
-    throw err;
-  }
+  const { data } = await API.post(
+    "/api/admin/login",
+    { identifier, password }
+  );
+  return data;
 };
 
-// Fetch all users (GET /api/admin/users)
+// ----------------- USERS -----------------
 export const fetchUsers = async () => {
-  try {
-    const { data } = await API.get("/admin/users");
-    return data;
-  } catch (err) {
-    console.error("Error fetching users:", err.response?.data || err.message);
-    throw err;
-  }
+  const { data } = await API.get("/api/admin/users");
+  return data;
 };
 
-// Update user (PUT /api/admin/users/:id)
 export const updateUser = async (id, userData) => {
-  try {
-    const { data } = await API.put(`/admin/users/${id}`, userData);
-    return data;
-  } catch (err) {
-    console.error("Error updating user:", err.response?.data || err.message);
-    throw err;
-  }
+  const { data } = await API.put(`/api/admin/users/${id}`, userData);
+  return data;
 };
 
-// Delete user (DELETE /api/admin/users/:id)
 export const deleteUser = async (id) => {
-  try {
-    const { data } = await API.delete(`/admin/users/${id}`);
-    return data;
-  } catch (err) {
-    console.error("Error deleting user:", err.response?.data || err.message);
-    throw err;
-  }
+  const { data } = await API.delete(`/api/admin/users/${id}`);
+  return data;
 };
 
 export default API;
