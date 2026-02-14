@@ -5,6 +5,7 @@ import  User  from "../models/User.js";
 import { otpLogs } from "../models/otpLogs.model.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 // src/controllers/user.controller.js
 import { generateReferralId } from "../utils/refrel.js";
 import { ReferAmount } from "../models/add.refer.amount.model.js";
@@ -433,7 +434,9 @@ const getAllUsers = async (req, res) => {
 
     res.status(200).json({ success: true, user: updatedUser });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server Error", error });
+    console.error("Error in updateUser:", error);
+    // Return error message for easier debugging (remove stack in production)
+    res.status(500).json({ success: false, message: error.message || "Server Error", error: error.stack || error });
   }
 };
 

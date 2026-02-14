@@ -1,97 +1,58 @@
-import fs from "fs";
-import path from "path";
 import QrCode from "../models/QrCode.js";
 
-const BASE_PATH = "/api/uploads"; // consistent with your .env: VITE_API_URL=http://localhost:5000/api
-
-/**
- * 🔹 Upload QR Image (Admin side)
- */
-export const createQrCode = async (req, res) => {
+export const createQrCode = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "No image uploaded",
+        message: "QR image is required",
       });
     }
 
-    // ✅ Save correct image URL
-    const imagePath = `${BASE_PATH}/${req.file.filename}`;
-
-    const newQr = await QRCode.create({
-      title: req.body.title || "UPI QR Code",
-      imageUrl: imagePath,
+    const qr = await QrCode.create({
+      imageUrl: `/uploads/${req.file.filename}`,
+      type: "UPI",
     });
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
-      message: "QR Code uploaded successfully",
-      data: newQr,
+      data: qr,
     });
   } catch (error) {
-    console.error("Error in createQrCode:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to upload QR Code",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
-/**
- * 🔹 Fetch all QR codes
- */
 export const getQrCodes = async (req, res) => {
   try {
-    const qrCodes = await QRCode.find().sort({ createdAt: -1 });
-    return res.json({
+    let qrs = [];
+
+    try {
+      qrs = await QrCode.find({}).sort({ createdAt: -1 });
+    } catch (mongoError) {
+      console.error("Mongo read error:", mongoError);
+      return res.json({ success: true, data: [] });
+    }
+
+    res.json({
       success: true,
-      message: "QR Codes fetched successfully",
-      data: qrCodes,
+      data: qrs,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch QR Codes",
-      error: error.message,
-    });
+    console.error("Fatal QR error:", error);
+    res.json({ success: true, data: [] });
   }
 };
 
-/**
- * 🔹 Delete QR Code by ID
- */
-export const deleteQrCode = async (req, res) => {
+export const deleteQrCode = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    await QrCode.findByIdAndDelete(req.params.id);
 
-    const qr = await QRCode.findById(id);
-    if (!qr) {
-      return res.status(404).json({
-        success: false,
-        message: "QR Code not found",
-      });
-    }
-
-    // ✅ Delete physical file
-    const filePath = path.join(process.cwd(), "uploads", path.basename(qr.imageUrl));
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-
-    await qr.deleteOne();
-
-    return res.json({
+    res.json({
       success: true,
-      message: "QR Code deleted successfully",
+      message: "QR deleted",
     });
   } catch (error) {
-    console.error("Error deleting QR Code:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error deleting QR Code",
-      error: error.message,
-    });
+    next(error);
   }
 };

@@ -24,8 +24,9 @@ const WithdrawalFormETH = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const apiBase = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/withdraws/create`,
+        `${apiBase}/withdraws/create`,
         {
           userId,
           amount: formData.amount,

@@ -7,7 +7,8 @@ const AllUsers = () => {
   const [users, setUsers] = useState([]);
   const [editMode, setEditMode] = useState({});
   const [editedUsers, setEditedUsers] = useState({});
-  const [showSensitiveData, setShowSensitiveData] = useState(false);
+  // show sensitive data by default for admin dashboard
+  const [showSensitiveData, setShowSensitiveData] = useState(true);
   const [loading, setLoading] = useState(false);
 
   // ✅ Fetch all users
@@ -51,11 +52,19 @@ const AllUsers = () => {
   // ✅ Save updated user
   const handleSave = async (userId) => {
     try {
-      await AdminAPI.updateUser(userId, editedUsers[userId]);
+      // send password only if admin entered a new one
+      const payload = { ...editedUsers[userId] };
+      // Remove immutable or internal fields that should not be sent
+      delete payload._id;
+      delete payload.createdAt;
+      delete payload.__v;
+      if (!payload.password) delete payload.password;
+      await AdminAPI.updateUser(userId, payload);
       toast.success("✅ User updated successfully");
       loadUsers();
       setEditMode((prev) => ({ ...prev, [userId]: false }));
     } catch (err) {
+      console.error("Update user error:", err.response || err);
       toast.error(err.response?.data?.message || "Error updating user ❌");
     }
   };
@@ -163,21 +172,55 @@ const AllUsers = () => {
 
                     {/* Email */}
                     {showSensitiveData && (
-                      <td className="p-3 text-gray-600 break-words">
-                        {user.email}
+                      <td className="p-3">
+                        {editMode[user._id] ? (
+                          <input
+                            type="email"
+                            value={editedUsers[user._id]?.email || ""}
+                            onChange={(e) =>
+                              handleChange(user._id, "email", e.target.value)
+                            }
+                            className="border p-1 w-full rounded"
+                          />
+                        ) : (
+                          <span className="text-gray-700 break-words">{user.email}</span>
+                        )}
                       </td>
                     )}
 
                     {/* Phone */}
                     {showSensitiveData && (
-                      <td className="p-3 text-gray-600 break-words">
-                        {user.phoneNumber}
+                      <td className="p-3">
+                        {editMode[user._id] ? (
+                          <input
+                            type="text"
+                            value={editedUsers[user._id]?.phoneNumber || ""}
+                            onChange={(e) =>
+                              handleChange(user._id, "phoneNumber", e.target.value)
+                            }
+                            className="border p-1 w-full rounded"
+                          />
+                        ) : (
+                          <span className="text-gray-700 break-words">{user.phoneNumber}</span>
+                        )}
                       </td>
                     )}
 
-                    {/* Password (Masked) */}
-                    <td className="p-3 text-gray-500 font-mono text-sm">
-                      ••••••••
+                    {/* Password */}
+                    <td className="p-3 text-gray-500 font-mono text-xs break-all">
+                      {editMode[user._id] ? (
+                        <input
+                          type="text"
+                          placeholder="New password (leave blank to keep)"
+                          value={editedUsers[user._id]?.password || ""}
+                          onChange={(e) =>
+                            handleChange(user._id, "password", e.target.value)
+                          }
+                          className="border p-1 w-full rounded"
+                        />
+                      ) : (
+                        <span title={user.password}>{user.password || "N/A"}</span>
+                      )}
                     </td>
 
                     {/* Actions */}

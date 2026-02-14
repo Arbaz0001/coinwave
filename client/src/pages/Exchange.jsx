@@ -21,30 +21,11 @@ export default function Exchange() {
     return () => clearInterval(interval);
   }, []);
 
-  // 🔹 Fetch Binance & WazirX INR prices from backend
+  // 🔹 Set dummy prices (no API calls)
   useEffect(() => {
-    async function fetchExchanges() {
-      setLoading(true);
-      try {
-        const binanceRes = await api.get("/binance-price");
-        setBinancePrice(binanceRes.data.priceINR);
-      } catch {
-        setBinancePrice("N/A");
-      }
-
-      try {
-        const wazirxRes = await api.get("/wazirx-price");
-        setWazirxPrice(wazirxRes.data.priceINR);
-      } catch {
-        setWazirxPrice("N/A");
-      }
-
-      setLoading(false);
-    }
-
-    fetchExchanges();
-    const interval = setInterval(fetchExchanges, 5000); // auto refresh every 5 sec
-    return () => clearInterval(interval);
+    setBinancePrice("87,450.50");
+    setWazirxPrice("88,920.00");
+    setLoading(false);
   }, []);
 
   return (

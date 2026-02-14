@@ -1,10 +1,12 @@
 // src/App.jsx
-import React from "react";
+import React, { useState } from "react";
 import { Routes, Route } from "react-router-dom";
+import { MessageCircle, X } from "lucide-react";
 
 // common components
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import HelpSupport from "./pages/HelpSupport";
 
 // main pages
 import Home from "./pages/Home";
@@ -32,9 +34,10 @@ import ExchangePrices from "./components/ExchangePrices";
 import ExchangeHistory from "./pages/ExchangeHistory";
 import Statement from "./pages/Statement";
 import BankAccount from "./pages/BankAccount";
-import HelpSupport from "./pages/HelpSupport";
 
 export default function App() {
+  const [showSupport, setShowSupport] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -194,8 +197,35 @@ export default function App() {
       </main>
 
       <footer className="bg-white border-t py-4 text-center">
-        © {new Date().getFullYear()} CoinWave247 - Built by Arbaz Sheikh
+        © {new Date().getFullYear()} Coinpay - Built by Arbaz Sheikh
       </footer>
+
+      {/* Fixed Support Button - Shows on Every Page */}
+      <button
+        onClick={() => setShowSupport(true)}
+        className="fixed bottom-6 right-6 z-40 bg-green-600 hover:bg-green-700 text-white p-4 rounded-full shadow-xl transition transform hover:scale-110 flex items-center justify-center"
+        title="Help & Support"
+      >
+        <MessageCircle size={28} />
+      </button>
+
+      {/* Support Modal */}
+      {showSupport && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-gray-900 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowSupport(false)}
+              className="absolute top-4 right-4 z-10 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Help Support Component */}
+            <HelpSupport />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

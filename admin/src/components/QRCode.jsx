@@ -13,7 +13,8 @@ const QRCode = () => {
   // ✅ Fetch existing QR Codes
   const fetchQrCodes = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/qrcode/qr-codes`);
+      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
+      const res = await fetch(`${baseApi}/qrcode/qr-codes`);
       const data = await res.json();
       if (data.success) setQrCodes(data.data);
     } catch (err) {
@@ -61,7 +62,8 @@ const QRCode = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this QR code?")) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/qrcode/delete-qr/${id}`, {
+      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
+      const res = await fetch(`${baseApi}/qrcode/delete-qr/${id}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -91,7 +93,8 @@ const QRCode = () => {
       formData.append("image", qrImage); // ✅ Field name fixed
       formData.append("type", "UPI");
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/qrcode/qr`, {
+      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
+      const res = await fetch(`${baseApi}/qrcode/qr`, {
         method: "POST",
         body: formData,
       });
@@ -200,11 +203,11 @@ const QRCode = () => {
                 className="bg-gray-800 p-3 rounded-lg flex flex-col items-center"
               >
                 <img
-                   src={
-                        qr.imageUrl.startsWith("http")
-                          ? qr.imageUrl
-                          : `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}${qr.imageUrl}`
-                            }
+                  src={
+                    qr.imageUrl.startsWith("http")
+                      ? qr.imageUrl
+                      : `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api${qr.imageUrl}`
+                  }
                        alt={qr.title}
                          className="w-auto object-contain mb-2"
                      />

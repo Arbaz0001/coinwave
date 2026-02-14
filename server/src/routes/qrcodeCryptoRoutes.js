@@ -8,13 +8,14 @@ import {
 
 const router = express.Router();
 
-// ✅ Admin: Upload Crypto QR
+// POST: Upload Crypto QR code (Admin)
+// Expects: multipart/form-data with field name "image"
 router.post("/upload", upload.single("image"), createCryptoQr);
 
-// ✅ User: Get all Crypto QRs
+// GET: Fetch all Crypto QR codes
 router.get("/all", getCryptoQrs);
 
-// ✅ Admin: Delete Crypto QR
+// DELETE: Delete Crypto QR code by ID
 router.delete("/delete/:id", deleteCryptoQr);
 
 export default router;

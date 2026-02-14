@@ -10,10 +10,11 @@ import Deposits from "./components/Deposite";
 import Withdrawals from "./components/Withdrawals";
 import ReferAmount from "./components/ReferAmount";
 import TransactionHistory from "./components/TransactionHistory";
+import USDTTransactionHistory from "./components/USDTTransactionHistory";
 import QRCode from "./components/QRCode";
 import QRCodeCrypto from "./components/QRCodeCrypto";
 import AddNotification from "./components/addNotification";
-import AdminController from "./components/AdminController";
+import SupportSettings from "./components/SupportSettings";
 
 export default function App() {
   const { isLoggedIn, loading } = useAdminAuth();
@@ -30,10 +31,11 @@ export default function App() {
     { key: "withdrawals", label: "Withdrawals", component: Withdrawals },
     { key: "refer", label: "Refer Amount", component: ReferAmount },
     { key: "history", label: "Transaction History", component: TransactionHistory },
+    { key: "usdt", label: "💱 USDT Transactions", component: USDTTransactionHistory },
     { key: "qrcode", label: "QR Code", component: QRCode },
     { key: "qrcodecrypto", label: "Crypto QR", component: QRCodeCrypto },
     { key: "notification", label: "Notifications", component: AddNotification },
-    { key: "admincontroller", label: "Admin Control", component: AdminController },
+    { key: "admincontroller", label: "Support Settings", component: SupportSettings },
   ];
 
   const CurrentTab = tabList.find((t) => t.key === activeTab)?.component || AllUsers;

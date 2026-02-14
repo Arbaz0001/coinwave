@@ -15,7 +15,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2">
             <img src={logo} alt="logo" className="h-10 w-10 object-contain" />
             <Link to="/" className="text-xl font-bold">
-              coinwave
+              coinwpay
             </Link>
           </div>
 

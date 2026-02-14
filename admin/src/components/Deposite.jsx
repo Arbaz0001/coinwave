@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Check, X } from "lucide-react";
+import { useAdminAuth } from "../context/AdminAuthContext";
 
 const Deposite = () => {
   const [deposits, setDeposits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("upi");
+  const { admin } = useAdminAuth();
+
+  // ✅ Get auth header
+  const getAuthHeader = () => ({
+    Authorization: `Bearer ${admin.token || localStorage.getItem("admin_token")}`,
+    "Content-Type": "application/json",
+  });
 
   // ✅ Fetch all deposits
   const fetchDeposits = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/deposit/all`);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/deposit/all`, {
+        headers: getAuthHeader(),
+      });
       if (res.data.success) {
         setDeposits(res.data.data || []);
       }
@@ -29,49 +39,22 @@ const Deposite = () => {
   // ✅ Approve deposit
   const handleApprove = async (depositId, userId, amount) => {
     try {
-      // 🧩 Handle both userId types (object or string)
-      const finalUserId =
-        userId && typeof userId === "object" ? userId._id : userId;
-
-      if (!finalUserId) {
-        alert("❌ User ID missing in this deposit!");
-        console.error("Deposit missing userId:", { depositId, userId });
-        return;
-      }
-
-      console.log("🟩 Wallet Add Request:", {
-        userId: finalUserId,
-        amount,
-      });
-
-      // 1️⃣ Update deposit status
+      // 1️⃣ Update deposit status (backend auto-updates wallet)
       const res = await axios.put(
-        `${import.meta.env.VITE_API_URL}/deposit/${depositId}/status`,
-        { status: "approved" }
+        `${import.meta.env.VITE_API_URL}/api/deposit/${depositId}/approve`,
+        { remarks: "Approved by admin" },
+        { headers: getAuthHeader() }
       );
 
       if (res.data.success) {
-        // 2️⃣ Update wallet
-        const walletRes = await axios.post(
-          `${import.meta.env.VITE_API_URL}/wallet/add`,
-          {
-            userId: finalUserId,
-            amount: Number(amount),
-          }
-        );
-
-        if (walletRes.data.success) {
-          alert("✅ Deposit approved and wallet updated!");
-          fetchDeposits();
-        } else {
-          alert(walletRes.data.message || "Wallet update failed ❌");
-        }
+        alert("✅ Deposit approved and wallet updated!");
+        fetchDeposits();
       } else {
-        alert("Deposit status update failed ❌");
+        alert(res.data.message || "Failed to approve deposit ❌");
       }
     } catch (err) {
       console.error("Error approving deposit:", err);
-      alert("Server error");
+      alert(err.response?.data?.message || "Server error");
     }
   };
 
@@ -79,19 +62,20 @@ const Deposite = () => {
   const handleReject = async (depositId) => {
     try {
       const res = await axios.put(
-        `${import.meta.env.VITE_API_URL}/deposit/${depositId}/status`,
-        { status: "rejected" }
+        `${import.meta.env.VITE_API_URL}/api/deposit/${depositId}/reject`,
+        { rejectionReason: "Rejected by admin" },
+        { headers: getAuthHeader() }
       );
 
       if (res.data.success) {
-        alert("Deposit rejected ❌");
+        alert("✅ Deposit rejected!");
         fetchDeposits();
       } else {
-        alert("Failed to reject deposit ❌");
+        alert(res.data.message || "Failed to reject deposit ❌");
       }
     } catch (err) {
       console.error("Error rejecting deposit:", err);
-      alert("Error rejecting deposit");
+      alert(err.response?.data?.message || "Server error");
     }
   };
 
@@ -130,67 +114,110 @@ const Deposite = () => {
           {filteredDeposits.map((d) => (
             <div
               key={d._id}
-              className="bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-3xl flex flex-col md:flex-row justify-between items-center gap-4 border border-gray-700 hover:border-blue-500 transition"
+              className="bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-4xl border border-gray-700 hover:border-blue-500 transition"
             >
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-blue-400">
-                  ₹{d.amount} — {d.method.toUpperCase()}
-                </p>
-                <p className="text-sm text-gray-400">
-                  Status:{" "}
-                  <span
-                    className={`font-medium ${
-                      d.status === "pending"
-                        ? "text-yellow-400"
-                        : d.status === "approved"
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {d.status.toUpperCase()}
-                  </span>
-                </p>
-                <p className="text-xs text-gray-500">
-                  User ID:{" "}
-                  <span className="text-gray-300">
-                    {d.userId?._id || d.userId || "N/A"}
-                  </span>
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                {d.status === "pending" ? (
-                  <>
+              {/* Header */}
+              <div className="flex justify-between items-start mb-4">
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-blue-400">
+                    ₹{d.amount} — {d.method.toUpperCase()}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Status:{" "}
+                    <span
+                      className={`font-medium ${
+                        d.status === "pending"
+                          ? "text-yellow-400"
+                          : d.status === "approved"
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {d.status.toUpperCase()}
+                    </span>
+                  </p>
+                </div>
+                {d.status === "pending" && (
+                  <div className="flex gap-2">
                     <button
                       onClick={() =>
-                        handleApprove(
-                          d._id,
-                          d.userId?._id || d.userId,
-                          d.amount
-                        )
+                        handleApprove(d._id, d.userId?._id || d.userId, d.amount)
                       }
-                      className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-1 transition"
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm flex items-center gap-1 transition"
                     >
-                      <Check size={16} /> Approve
+                      <Check size={14} /> Approve
                     </button>
                     <button
                       onClick={() => handleReject(d._id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-1 transition"
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center gap-1 transition"
                     >
-                      <X size={16} /> Reject
+                      <X size={14} /> Reject
                     </button>
-                  </>
-                ) : (
-                  <span
-                    className={`px-4 py-2 rounded-md font-medium ${
-                      d.status === "approved"
-                        ? "bg-green-700 text-white"
-                        : "bg-red-700 text-white"
-                    }`}
-                  >
-                    {d.status.toUpperCase()}
-                  </span>
+                  </div>
                 )}
+              </div>
+
+              {/* User Info */}
+              <div className="mb-4 p-3 bg-gray-700 rounded-lg text-sm">
+                <p className="text-gray-300 mb-1">
+                  👤 <span className="font-medium">{d.userId?.name || "Unknown"}</span> ({d.userId?.email || "N/A"})
+                </p>
+                <p className="text-gray-400 text-xs">
+                  User ID: <span className="font-mono text-gray-300">{d.userId?._id || d.userId || "N/A"}</span>
+                </p>
+              </div>
+
+              {/* UPI Details */}
+              {d.method === "UPI" && d.upiDetails && (
+                <div className="mb-4 p-3 bg-green-900 bg-opacity-30 border border-green-700 rounded-lg text-sm">
+                  <p className="text-green-300 font-medium mb-2">📱 UPI Details</p>
+                  <p className="text-gray-300">
+                    Transaction ID: <span className="font-mono text-white">{d.upiDetails.transactionId}</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Crypto Details - MOST IMPORTANT: User's wallet address */}
+              {d.method === "Crypto" && d.cryptoDetails && (
+                <div className="mb-4 p-4 bg-blue-900 bg-opacity-40 border-2 border-blue-500 rounded-lg">
+                  <p className="text-blue-300 font-bold mb-3">🔷 CRYPTO DETAILS - USER WALLET ADDRESS:</p>
+                  
+                  <div className="space-y-2 text-sm">
+                    <p className="text-gray-200">
+                      Network: <span className="font-semibold text-white">{d.cryptoDetails.network?.toUpperCase() || "N/A"}</span>
+                    </p>
+                    
+                    {/* 🚨 USER'S RECEIVING WALLET - MOST IMPORTANT */}
+                    {d.cryptoDetails.userReceivingWallet && (
+                      <div className="p-2 bg-yellow-900 bg-opacity-50 border border-yellow-500 rounded">
+                        <p className="text-yellow-300 font-bold text-xs mb-1">👛 USER'S WALLET (Send USDT here):</p>
+                        <p className="text-white font-mono text-xs break-all">
+                          {d.cryptoDetails.userReceivingWallet}
+                        </p>
+                      </div>
+                    )}
+
+                    {d.cryptoDetails.transactionHash && (
+                      <p className="text-gray-200">
+                        Transaction: <span className="font-mono text-gray-300">{d.cryptoDetails.transactionHash.substring(0, 20)}...</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Remarks */}
+              {d.remarks && (
+                <div className="mb-4 p-3 bg-gray-700 rounded-lg text-sm">
+                  <p className="text-gray-300 mb-1">
+                    💬 Remarks: <span className="text-gray-200">{d.remarks}</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Footer Info */}
+              <div className="text-xs text-gray-500 pt-3 border-t border-gray-700">
+                <p>Created: {new Date(d.createdAt).toLocaleString()}</p>
               </div>
             </div>
           ))}

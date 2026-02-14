@@ -51,7 +51,8 @@ export const authMiddleware = async (req, res, next) => {
     console.log("✅ Decoded token payload:", payload);
 
     req.user = {
-      id: payload.id || payload._id || null,
+      _id: payload._id || payload.id || null,
+      id: payload._id || payload.id || null,
       identifier: payload.email || payload.phoneNumber || payload.identifier || null,
       role: payload.role || "user",
     };

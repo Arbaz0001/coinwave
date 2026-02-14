@@ -1,82 +1,66 @@
 import QrCrypto from "../models/QrCrypto.js";
-import path from "path";
-import { fileURLToPath } from "url";
 
-// For proper path handling
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-/**
- * 🔹 Upload Crypto QR Code (Admin)
- */
-export const createCryptoQr = async (req, res) => {
+export const createCryptoQr = async (req, res, next) => {
   try {
-    const { title, network, cryptoType } = req.body;
-
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "Image file is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Crypto QR image required",
+      });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const network = req.body.network?.toLowerCase();
+    const cryptoType = req.body.cryptoType?.toLowerCase();
+    const address = req.body.address;
+
+    if (!network || !cryptoType || !address) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
 
     const qr = await QrCrypto.create({
-      title,
+      title: `${cryptoType.toUpperCase()} ${network.toUpperCase()}`,
       network,
       cryptoType,
-      imageUrl,
+      address,
+      imageUrl: `/uploads/${req.file.filename}`,
     });
 
-    res.json({
+    res.status(201).json({
       success: true,
-      message: "Crypto QR uploaded successfully",
       data: qr,
     });
   } catch (error) {
-    console.error("❌ Error uploading crypto QR:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Error uploading crypto QR",
-      error: error.message,
-    });
+    console.error("❌ Error uploading crypto QR:", error);
+    next(error);
   }
 };
 
-/**
- * 🔹 Get All Crypto QRs (User side)
- */
-export const getCryptoQrs = async (req, res) => {
+
+export const getCryptoQrs = async (req, res, next) => {
   try {
     const qrs = await QrCrypto.find().sort({ createdAt: -1 });
-    res.json({ success: true, data: qrs });
-  } catch (error) {
-    console.error("❌ Error fetching crypto QRs:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching crypto QRs",
-      error: error.message,
+
+    res.json({
+      success: true,
+      data: qrs || [],
     });
+  } catch (error) {
+    next(error);
   }
 };
 
-/**
- * 🔹 Delete Crypto QR (Admin)
- */
-export const deleteCryptoQr = async (req, res) => {
+export const deleteCryptoQr = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const qr = await QrCrypto.findByIdAndDelete(id);
+    await QrCrypto.findByIdAndDelete(req.params.id);
 
-    if (!qr) {
-      return res.status(404).json({ success: false, message: "QR not found" });
-    }
-
-    res.json({ success: true, message: "QR deleted successfully" });
-  } catch (error) {
-    console.error("❌ Error deleting crypto QR:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Error deleting crypto QR",
-      error: error.message,
+    res.json({
+      success: true,
+      message: "Crypto QR deleted",
     });
+  } catch (error) {
+    next(error);
   }
 };

@@ -4,13 +4,14 @@ import { createQrCode, getQrCodes, deleteQrCode } from "../controllers/qrCodeCon
 
 const router = express.Router();
 
-// 🔹 Admin uploads QR image (use "qrCode" field for UPI)
-router.post("/qr", upload.single("qrCode"), createQrCode);
+// POST: Upload QR code (Admin)
+// Expects: multipart/form-data with field name "image"
+router.post("/qr", upload.single("image"), createQrCode);
 
-// 🔹 Users fetch all QR images
+// GET: Fetch all QR codes
 router.get("/qr-codes", getQrCodes);
 
-// 🔹 Delete QR Code
+// DELETE: Delete QR code by ID
 router.delete("/delete-qr/:id", deleteQrCode);
 
 export default router;

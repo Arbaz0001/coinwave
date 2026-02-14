@@ -24,6 +24,7 @@ import depositRoutes from "./routes/depositRoutes.js";
 import qrCodeRoutes from "./routes/qrCodeRoutes.js";
 import qrcodeCryptoRoutes from "./routes/qrcodeCryptoRoutes.js";
 import notificationRoutes from "./routes/notification.routes.js"; // if you create it
+import supportRoutes from "./routes/supportRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -36,8 +37,17 @@ const __dirname = path.dirname(__filename);
 // ✅ Create uploads folder if not exists
 // Use a consistent uploads folder (project root /uploads)
 const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log(`✅ Uploads folder created at: ${uploadDir}`);
+  } else {
+    console.log(`✅ Uploads folder already exists at: ${uploadDir}`);
+  }
+} catch (err) {
+  console.error(`❌ Failed to create uploads folder at ${uploadDir}:`, err.message);
+  console.error(`   Issue: Check folder permissions or disk space`);
+  throw err; // fail fast - don't start server if uploads folder can't be created
 }
 
 // ✅ Serve uploaded images (accessible via /api/uploads/:filename)
@@ -92,8 +102,13 @@ app.use("/api/crypto-qrcode", qrcodeCryptoRoutes);
 
 // if you create notification routes, mount them:
 app.use("/api/notification", notificationRoutes);
+app.use("/api/support", supportRoutes);
 
-// ✅ Static uploads (serve the same uploads dir we created)
+// ✅ Static file serving for uploads: /uploads/filename
+// This allows frontend to load images like /uploads/qr-1234567.png
+app.use("/uploads", express.static(uploadDir));
+
+// Alternative: serve via /api/uploads/filename
 app.use("/api/uploads", express.static(uploadDir));
 
 // -------------------- Socket.IO setup --------------------
@@ -152,20 +167,26 @@ io.on("connection", (socket) => {
 // -------------------- end Socket.IO setup --------------------
 
 // ✅ SINGLE 404 HANDLER (only once, at end)
+// ✅ Global error handler: catches multer and thrown errors
+app.use((err, req, res, next) => {
+  console.error("🚨 Error:", err.message || err);
+  
+  // Don't re-send if headers already sent
+  if (res.headersSent) return next(err);
+  
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
+});
+
+// ✅ 404 handler (only once, must be last)
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route not found: ${req.originalUrl}`,
-  });
-});
-
-// ✅ Global Error Handler
-app.use((err, req, res, next) => {
-  console.error("❌ Server Error:", err.message);
-  res.status(500).json({
-    success: false,
-    message: "Internal Server Error",
-    error: err.message,
   });
 });
 

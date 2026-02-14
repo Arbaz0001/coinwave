@@ -10,12 +10,14 @@ const QRCodeCrypto = () => {
   const [qrCodes, setQrCodes] = useState([]);
   const [network, setNetwork] = useState("trc20");
   const [cryptoType, setCryptoType] = useState("usdt");
+  const [address, setAddress] = useState("");
   const inputRef = useRef(null);
 
   // ✅ Fetch all existing crypto QR codes
   const fetchQrCodes = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/crypto-qrcode/all`);
+      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
+      const res = await fetch(`${baseApi}/crypto-qrcode/all`);
       const data = await res.json();
 
       if (data.success) {
@@ -70,7 +72,8 @@ const QRCodeCrypto = () => {
       return;
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/crypto-qrcode/delete/${id}`, {
+      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
+      const res = await fetch(`${baseApi}/crypto-qrcode/delete/${id}`, {
         method: "DELETE",
       });
 
@@ -104,8 +107,10 @@ const QRCodeCrypto = () => {
       formData.append("title", `${cryptoType.toUpperCase()} ${network.toUpperCase()}`);
       formData.append("network", network);
       formData.append("cryptoType", cryptoType);
+        formData.append("address", address);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/crypto-qrcode/upload`, {
+      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
+      const res = await fetch(`${baseApi}/crypto-qrcode/upload`, {
         method: "POST",
         body: formData,
       });
@@ -145,7 +150,7 @@ const QRCodeCrypto = () => {
             Select Crypto Type
           </label>
           <div className="flex gap-3">
-            {["usdt", "btc"].map((type) => (
+            {["usdt"].map((type) => (
               <button
                 key={type}
                 type="button"
@@ -166,7 +171,7 @@ const QRCodeCrypto = () => {
             Select Network
           </label>
           <div className="flex gap-3">
-            {["trc20", "erc20"].map((net) => (
+            {["trc20", "erc20", "bep20"].map((net) => (
               <button
                 key={net}
                 type="button"
@@ -179,6 +184,18 @@ const QRCodeCrypto = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Address Input */}
+        <div className="mb-4">
+          <label className="block text-white font-medium mb-2">Wallet Address</label>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder={`Enter ${cryptoType.toUpperCase()} ${network.toUpperCase()} address`}
+            className="w-full p-2 rounded border border-gray-600 bg-gray-700 text-white"
+          />
         </div>
 
         {/* Drag & Drop Upload Box */}
@@ -259,11 +276,18 @@ const QRCodeCrypto = () => {
                 className="bg-gray-800 p-3 rounded-lg flex flex-col items-center"
               >
                 <img
-                  src={`${import.meta.env.VITE_API_URL}${qr.imageUrl}`}
+                  src={
+                    qr.imageUrl.startsWith("http")
+                      ? qr.imageUrl
+                      : `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api${qr.imageUrl}`
+                  }
                   alt={qr.title}
                   className="w-auto object-contain mb-2"
                 />
                 <p className="text-white mb-2">{qr.title}</p>
+                {qr.address && (
+                  <p className="text-gray-300 text-sm mb-2">Address: {qr.address}</p>
+                )}
                 <button
                   onClick={() => handleDelete(qr._id)}
                   className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs flex items-center gap-1"

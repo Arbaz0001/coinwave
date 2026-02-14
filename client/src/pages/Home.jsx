@@ -14,6 +14,7 @@ const Navbar = () => {
 
 
 export default function Home() {
+
   return (
     <div className="m-[4px] space-y-2">
       {/* Hero Card */}
@@ -25,7 +26,7 @@ export default function Home() {
         />
         <div className="absolute top-2 left-2 md:top-4 md:left-4 text-white bg-black/30 p-2 md:p-4 rounded">
           <h1 className="text-2xl md:text-5xl font-bold">
-            Welcome to Coinwave
+            Welcome to Coinpay
           </h1>
           <p className="mt-1 text-xs md:text-lg">
             Exchange more, earn more <br /> make your life better
@@ -86,7 +87,7 @@ export default function Home() {
     </div>
   </div>
 </div>
-
-    </div>
+</div>
   );
 }
+

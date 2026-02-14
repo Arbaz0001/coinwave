@@ -1,14 +1,29 @@
 import express from "express";
-import { addNotification, getNotificationsForUser } from "../controllers/notificationController.js";
-import { authMiddleware, isAdmin } from "../middlewares/authMiddleware.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
+import {
+  createNotification,
+  getNotificationsForUser,
+  getAllNotifications,
+  markAsRead,
+  deleteNotification,
+} from "../controllers/notificationController.js";
 
 const router = express.Router();
 
-// Admin-only: create notification
-router.post("/add", authMiddleware, isAdmin, addNotification);
+// ✅ ADMIN: Create and broadcast notifications
+router.post("/", authMiddleware, createNotification);
 
-// PUBLIC: let any user (logged-in or guest) fetch global notifications
-// If you want targeted notifications for logged-in users, controller can still filter by userId query param.
-router.get("/", getNotificationsForUser);
+// ✅ ADMIN: Get all notifications
+router.get("/all", authMiddleware, getAllNotifications);
+
+// ✅ USER: Get notifications for current user
+router.get("/user/:userId", authMiddleware, getNotificationsForUser);
+
+// ✅ USER: Mark notification as read
+router.put("/:notificationId/read", authMiddleware, markAsRead);
+
+// ✅ ADMIN: Delete notification
+router.delete("/:notificationId", authMiddleware, deleteNotification);
 
 export default router;
+

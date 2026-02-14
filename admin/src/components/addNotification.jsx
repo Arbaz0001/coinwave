@@ -1,54 +1,69 @@
 import React, { useState } from "react";
 
-// 👇 Tumhare .env me VITE_API_URL = http://localhost:5000/api hai
-const API = `${import.meta.env.VITE_API_URL}/notification/add`;
+// Build API base correctly and use /api prefix
+const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
+const API = `${API_BASE}/notification`;
 
 const AddNotification = () => {
+  const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [isBroadcast, setIsBroadcast] = useState(true);
+  const [targetUserId, setTargetUserId] = useState("");
   const [status, setStatus] = useState("");
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setStatus("Saving...");
-
-  try {
-    const token =
+  const getToken = () => {
+    return (
+      localStorage.getItem("admin_token") ||
       localStorage.getItem("adminToken") ||
       localStorage.getItem("token") ||
-      localStorage.getItem("authToken");
+      localStorage.getItem("authToken") ||
+      null
+    );
+  };
 
-    console.log("DEBUG -> token from localStorage:", token);
-    if (!token) {
-      setStatus("❌ No admin token found. Please login as admin.");
-      return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus("Saving...");
+
+    try {
+      const token = getToken();
+      if (!token) {
+        setStatus("❌ No admin token found. Please login as admin.");
+        return;
+      }
+
+      const payload = {
+        title: title || "Announcement",
+        message,
+        isBroadcast: !!isBroadcast,
+      };
+
+      if (!isBroadcast) payload.userId = targetUserId || null;
+
+      const res = await fetch(API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok) {
+        setStatus("✅ Notification sent successfully!");
+        setTitle("");
+        setMessage("");
+        setTargetUserId("");
+      } else {
+        setStatus(`❌ Error: ${data?.message || data?.error || res.statusText}`);
+      }
+    } catch (err) {
+      console.error("Notification send error:", err);
+      setStatus(`❌ Error: ${err.message}`);
     }
-
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-
-    const res = await fetch(API, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ message }),
-    });
-
-    const data = await res.json().catch(() => null);
-    console.log("DEBUG -> response status:", res.status, "body:", data);
-
-    if (res.ok) {
-      setStatus("✅ Message saved successfully!");
-      setMessage("");
-    } else {
-      setStatus(`❌ Error: ${data?.message || data?.error || res.statusText}`);
-    }
-  } catch (err) {
-    console.error("DEBUG -> fetch error:", err);
-    setStatus(`❌ Error: ${err.message}`);
-  }
-};
-
+  };
 
   return (
     <section className="mx-auto max-w-md">
@@ -58,7 +73,14 @@ const handleSubmit = async (e) => {
 
       <div className="mx-4 p-6 bg-slate-700 text-white rounded-xl shadow-md">
         <form onSubmit={handleSubmit}>
-          {/* ✅ Textarea visible black text */}
+          <input
+            type="text"
+            placeholder="Optional title (e.g., System Update)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-white text-black placeholder-gray-500 border rounded-lg p-2 mb-3 focus:outline-none"
+          />
+
           <textarea
             className="w-full bg-white text-black placeholder-gray-500 border rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows="4"
@@ -68,11 +90,35 @@ const handleSubmit = async (e) => {
             required
           ></textarea>
 
+          <div className="flex items-center gap-3 mb-3">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={isBroadcast}
+                onChange={() => setIsBroadcast((s) => !s)}
+              />
+              <span className="text-sm">Broadcast to all users</span>
+            </label>
+          </div>
+
+          {!isBroadcast && (
+            <div className="mb-3">
+              <input
+                type="text"
+                placeholder="Target userId (MongoDB ObjectId)"
+                value={targetUserId}
+                onChange={(e) => setTargetUserId(e.target.value)}
+                className="w-full bg-white text-black placeholder-gray-500 border rounded-lg p-2 focus:outline-none"
+              />
+              <p className="text-xs text-gray-300 mt-1">Enter user _id to send a private notification.</p>
+            </div>
+          )}
+
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
           >
-            Save Message
+            Send Notification
           </button>
         </form>
 

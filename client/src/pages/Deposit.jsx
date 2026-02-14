@@ -1,81 +1,55 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 const Deposit = () => {
   const [method, setMethod] = useState("UPI");
   const [amount, setAmount] = useState("");
-  const [payNumber, setPayNumber] = useState("");
+  const [transactionId, setTransactionId] = useState("");
   const [cryptoType, setCryptoType] = useState("usdt");
   const [network, setNetwork] = useState("trc20");
+  const [transactionHash, setTransactionHash] = useState("");
   const [qrCodes, setQrCodes] = useState({ upi: [], crypto: [] });
   const [loading, setLoading] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // ✅ Base URL for serving images (removes /api)
-  const BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+  // ✅ API Base URL
+  const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
+  const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "");
 
-  // ✅ Load user safely from localStorage
+  // ✅ Get current user
   const user = JSON.parse(localStorage.getItem("cw_user"));
   const userId = user?._id || user?.id || null;
 
-  // ✅ Fetch both UPI & Crypto QR Codes
-  const fetchQrCodes = async () => {
-    try {
-      const upiRes = await fetch(`${import.meta.env.VITE_API_URL}/qrcode/qr-codes`);
-      const upiData = await upiRes.json();
+  // ✅ Fetch QR codes on mount
+  useEffect(() => {
+    fetchQrCodes();
+  }, []);
 
-      const cryptoRes = await fetch(`${import.meta.env.VITE_API_URL}/crypto-qrcode/all`);
+  // ✅ Load all QR codes
+  const fetchQrCodes = async () => {
+    setLoading(true);
+    try {
+      const [upiRes, cryptoRes] = await Promise.all([
+        fetch(`${API_BASE}/qrcode/qr-codes`),
+        fetch(`${API_BASE}/crypto-qrcode/all`),
+      ]);
+
+      const upiData = await upiRes.json();
       const cryptoData = await cryptoRes.json();
 
       setQrCodes({
         upi: upiData.data || [],
         crypto: cryptoData.data || [],
       });
+
+      console.log("✅ QR codes loaded:", {
+        upi: upiData.data?.length || 0,
+        crypto: cryptoData.data?.length || 0,
+      });
     } catch (err) {
       console.error("❌ Failed to fetch QR codes:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchQrCodes();
-  }, []);
-
-  // 🟩 Handle Deposit Submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!userId) return alert("⚠️ Please log in before making a deposit!");
-    if (!amount || !payNumber) return alert("⚠️ Please enter all deposit details!");
-    if (amount < 100) return alert("⚠️ Minimum deposit amount is ₹100!");
-
-    setLoading(true);
-
-    const details = {
-      payNumber,
-      ...(method === "Crypto" && { network, cryptoType }),
-    };
-
-    const payload = {
-      userId,
-      amount,
-      method,
-      details,
-      remarks: `Deposit via ${method}`,
-    };
-
-    try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/deposit/create`, payload);
-      if (res.data.success) {
-        console.log("✅ Deposit Created:", res.data.data);
-        setShowPopup(true);
-        setAmount("");
-        setPayNumber("");
-      } else {
-        alert(res.data.message || "Deposit creation failed!");
-      }
-    } catch (error) {
-      console.error("❌ Deposit Error:", error);
-      alert(error.response?.data?.message || "Server error, please try again!");
+      toast.error("Failed to load QR codes. Please refresh.");
     } finally {
       setLoading(false);
     }
@@ -91,170 +65,420 @@ const Deposit = () => {
     );
   };
 
-  // 🧩 Render Amount Input
-  const renderAmountInput = () => (
-    <div className="mb-4 w-full">
-      <label className="text-gray-700 font-medium block mb-2">Deposit Amount (₹)</label>
-      <input
-        type="number"
-        min={100}
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        placeholder="Enter deposit amount"
-        className="bg-white border border-gray-300 px-4 py-2 rounded-md w-full focus:ring-2 focus:ring-blue-500 outline-none"
-      />
-    </div>
-  );
-
-  // 🧩 Render Crypto Options
-  const renderCryptoOptions = () => (
-    <div className="mb-4">
-      <h2 className="font-semibold mb-2">Select Crypto Type</h2>
-      <div className="flex gap-3 mb-2">
-        {["usdt", "btc"].map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setCryptoType(type)}
-            className={`px-4 py-2 border rounded-md ${
-              cryptoType === type ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
-            }`}
-          >
-            {type.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      <h2 className="font-semibold mb-2">Select Network</h2>
-      <div className="flex gap-3">
-        {["trc20", "erc20"].map((net) => (
-          <button
-            key={net}
-            type="button"
-            onClick={() => setNetwork(net)}
-            className={`px-4 py-2 border rounded-md ${
-              network === net ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
-            }`}
-          >
-            {net.toUpperCase()}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  // 🧩 Render QR Image
-  const renderQR = () => {
+  // ✅ Get current QR info
+  const getCurrentQR = () => {
     if (method === "UPI") {
-      const qr = qrCodes.upi?.[0];
-      return qr ? (
-        <img
-  src={
-    qr.imageUrl.startsWith("http")
-      ? qr.imageUrl
-      : `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}${qr.imageUrl}`
-  }
-  alt="UPI QR"
-  className="w-48 h-48 object-contain rounded-lg mx-auto border"
-/>
+      return qrCodes.upi?.[0] || null;
+    }
+    return getCryptoQR();
+  };
 
-      ) : (
-        <p className="text-gray-500 text-center">No UPI QR available</p>
-      );
+  // ✅ Submit UPI deposit
+  const handleUPISubmit = async (e) => {
+    e.preventDefault();
+
+    if (!userId) {
+      toast.error("❌ Please log in first");
+      return;
     }
 
+    if (!amount || !transactionId) {
+      toast.error("❌ Please enter amount and transaction ID");
+      return;
+    }
+
+    if (Number(amount) < 100) {
+      toast.error("❌ Minimum deposit amount is ₹100");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await axios.post(
+        `${API_BASE}/deposit/upi`,
+        {
+          userId,
+          amount: Number(amount),
+          transactionId,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("user_token")}`,
+          },
+        }
+      );
+
+      if (response.data?.success) {
+        toast.success("✅ UPI deposit request submitted!");
+        setAmount("");
+        setTransactionId("");
+        // Optionally fetch updated deposits
+      } else {
+        toast.error(response.data?.message || "Failed to submit deposit");
+      }
+    } catch (error) {
+      console.error("❌ Deposit error:", error);
+      toast.error(error.response?.data?.message || "Failed to submit deposit");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ✅ Submit Crypto deposit
+  const handleCryptoSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!userId) {
+      toast.error("❌ Please log in first");
+      return;
+    }
+
+    if (!amount || !transactionHash) {
+      toast.error("❌ Please enter amount and transaction hash");
+      return;
+    }
+
+    if (Number(amount) < 100) {
+      toast.error("❌ Minimum deposit amount is ₹100");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await axios.post(
+        `${API_BASE}/deposit/crypto`,
+        {
+          userId,
+          amount: Number(amount),
+          cryptoType,
+          network,
+          transactionHash,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("user_token")}`,
+          },
+        }
+      );
+
+      if (response.data?.success) {
+        toast.success("✅ Crypto deposit request submitted!");
+        setAmount("");
+        setTransactionHash("");
+      } else {
+        toast.error(response.data?.message || "Failed to submit deposit");
+      }
+    } catch (error) {
+      console.error("❌ Crypto deposit error:", error);
+      toast.error(error.response?.data?.message || "Failed to submit deposit");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ✅ Render UPI QR Section
+  const renderUPIQR = () => {
+    const qr = qrCodes.upi?.[0];
+
+    return (
+      <div className="flex flex-col items-center gap-4">
+        {loading ? (
+          <div className="text-gray-500">Loading UPI QR...</div>
+        ) : qr ? (
+          <>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <img
+                src={
+                  qr.imageUrl.startsWith("http")
+                    ? qr.imageUrl
+                    : `${BASE_URL}${qr.imageUrl}`
+                }
+                alt="UPI QR"
+                className="w-40 h-40 object-contain rounded-md border"
+              />
+            </div>
+            {qr.title && <p className="text-sm text-gray-600">{qr.title}</p>}
+          </>
+        ) : (
+          <p className="text-red-500">❌ No UPI QR available</p>
+        )}
+      </div>
+    );
+  };
+
+  // ✅ Render Crypto QR Section
+  const renderCryptoQR = () => {
     const qr = getCryptoQR();
-    return qr ? (
-      <img
-        src={`${BASE_URL}${qr.imageUrl}`}
-        alt={qr.title || "Crypto QR"}
-        className="w-48 h-48 object-contain rounded-lg mx-auto border"
-      />
-    ) : (
-      <p className="text-gray-500 text-center">
-        No Crypto QR found for {cryptoType.toUpperCase()} ({network.toUpperCase()})
-      </p>
+
+    return (
+      <div className="flex flex-col items-center gap-4">
+        {loading ? (
+          <div className="text-gray-500">Loading Crypto QR...</div>
+        ) : qr ? (
+          <>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <img
+                src={
+                  qr.imageUrl.startsWith("http")
+                    ? qr.imageUrl
+                    : `${BASE_URL}${qr.imageUrl}`
+                }
+                alt={qr.title}
+                className="w-40 h-40 object-contain rounded-md border"
+              />
+            </div>
+
+            {qr.address && (
+              <div className="w-full p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Wallet Address:</p>
+                <p className="text-sm font-mono break-all text-blue-600">
+                  {qr.address}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(qr.address);
+                    toast.success("✅ Address copied!");
+                  }}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-700 underline"
+                >
+                  Copy Address
+                </button>
+              </div>
+            )}
+
+            {qr.title && <p className="text-sm text-gray-600">{qr.title}</p>}
+          </>
+        ) : (
+          <p className="text-red-500">
+            ❌ No QR found for {cryptoType.toUpperCase()} ({network.toUpperCase()})
+          </p>
+        )}
+      </div>
     );
   };
 
   return (
-    <div className="bg-white text-gray-900 py-6 px-4 flex justify-center min-h-screen">
-      <div className="flex flex-col w-full max-w-md">
-        {/* Method Selection */}
-        <div className="flex gap-4 justify-center mb-4">
-          {["UPI", "Crypto"].map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMethod(m)}
-              className={`px-4 py-2 rounded-md shadow ${
-                method === m ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
-              }`}
-            >
-              {m}
-            </button>
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Make a Deposit</h1>
+          <p className="text-gray-600">
+            Choose your preferred payment method and submit your transaction details
+          </p>
         </div>
 
-        {/* Amount */}
-        {renderAmountInput()}
+        {/* Method Selection */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            Select Payment Method
+          </h2>
 
-        {/* Crypto Options */}
-        {method === "Crypto" && renderCryptoOptions()}
-
-        {/* QR Code */}
-        {amount && renderQR()}
-
-        {/* Transaction ID Input */}
-        {amount && (
-          <div className="mt-4">
-            <label className="block font-medium mb-2">
-              {method === "UPI" ? "UPI Transaction ID" : "Crypto Transaction Hash"}
-            </label>
-            <input
-              type="text"
-              value={payNumber}
-              onChange={(e) => setPayNumber(e.target.value)}
-              placeholder={
-                method === "UPI" ? "Enter UPI Transaction ID" : "Enter Crypto Tx Hash"
-              }
-              className="border border-gray-300 px-4 py-2 rounded-md w-full focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-        )}
-
-        {/* Submit Button */}
-        {amount && payNumber && (
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className={`w-full mt-4 py-2 rounded-md text-white ${
-              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {loading ? "Submitting..." : "Submit Deposit"}
-          </button>
-        )}
-
-        {/* ✅ Success Popup */}
-        {showPopup && (
-          <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
-            <div className="bg-white rounded-md shadow-lg p-6 max-w-sm w-full">
-              <h2 className="text-xl font-bold mb-4 text-center text-green-600">
-                Deposit Submitted ✅
-              </h2>
-              <p className="text-center">
-                Your deposit request has been submitted successfully!
-              </p>
+          <div className="flex gap-4">
+            {["UPI", "Crypto"].map((m) => (
               <button
-                onClick={() => setShowPopup(false)}
-                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md w-full"
+                key={m}
+                type="button"
+                onClick={() => setMethod(m)}
+                className={`flex-1 px-6 py-3 rounded-lg font-medium transition ${
+                  method === m
+                    ? "bg-blue-600 text-white shadow-lg"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                Close
+                {m === "UPI" ? "💳 UPI" : "₿ Crypto"}
               </button>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
+
+        {/* Method-specific content */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          {method === "UPI" ? (
+            <>
+              {/* UPI QR Code */}
+              <div className="mb-8 pb-8 border-b">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Step 1: Scan QR Code
+                </h3>
+                {renderUPIQR()}
+              </div>
+
+              {/* UPI Form */}
+              <form onSubmit={handleUPISubmit} className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Step 2: Submit Transaction Details
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Deposit Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="100"
+                    step="1"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter amount (minimum ₹100)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    disabled={submitting}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum ₹100</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    UPI Transaction ID / Reference
+                  </label>
+                  <input
+                    type="text"
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    placeholder="Enter UPI transaction ID (e.g., 417U84EBVFD22F)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    disabled={submitting}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    You'll find this in your bank/UPI app after payment
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting || !amount || !transactionId}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {submitting ? "Submitting..." : "Submit UPI Deposit"}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              {/* Crypto Options */}
+              <div className="mb-8 pb-8 border-b">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Step 1: Select Network
+                </h3>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Crypto Type
+                  </label>
+                  <div className="flex gap-3">
+                    {["usdt"].map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setCryptoType(type)}
+                        disabled
+                        className="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white"
+                      >
+                        {type.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Currently only USDT is supported
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Blockchain Network
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["trc20", "erc20", "bep20"].map((net) => (
+                      <button
+                        key={net}
+                        type="button"
+                        onClick={() => setNetwork(net)}
+                        className={`px-3 py-2 rounded-lg font-medium text-sm transition ${
+                          network === net
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {net.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Crypto QR Code */}
+              <div className="mb-8 pb-8 border-b">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Step 2: Send To This Address
+                </h3>
+                {renderCryptoQR()}
+              </div>
+
+              {/* Crypto Form */}
+              <form onSubmit={handleCryptoSubmit} className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Step 3: Submit Transaction Details
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Deposit Amount (₹ equivalent)
+                  </label>
+                  <input
+                    type="number"
+                    min="100"
+                    step="1"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter deposit amount in INR equivalent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    disabled={submitting}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum ₹100</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Blockchain Transaction Hash / ID
+                  </label>
+                  <input
+                    type="text"
+                    value={transactionHash}
+                    onChange={(e) => setTransactionHash(e.target.value)}
+                    placeholder="Enter transaction hash (0x...)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                    disabled={submitting}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    You can find this on the blockchain explorer
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting || !amount || !transactionHash}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {submitting ? "Submitting..." : "Submit Crypto Deposit"}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* Info Box */}
+          <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-semibold text-blue-900 mb-2">ℹ️ What happens next?</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>✓ Your deposit request will be reviewed by our admin team</li>
+              <li>✓ Once verified, funds will be added to your wallet</li>
+              <li>✓ You'll receive a notification when your deposit is approved</li>
+              <li>✓ Contact support if you have any issues</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

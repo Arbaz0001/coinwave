@@ -1,29 +1,8 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useState } from "react";
 
 export default function ExchangePrices() {
-  const [binancePrice, setBinancePrice] = useState(null);
-  const [wazirxPrice, setWazirxPrice] = useState(null);
-
-  useEffect(() => {
-    const fetchData = () => {
-      // Binance API
-      axios
-        .get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
-        .then((res) => setBinancePrice(res.data.price))
-        .catch((err) => console.error("Binance API Error:", err));
-
-      // WazirX API
-      axios
-        .get("https://api.wazirx.com/api/v2/tickers/usdtinr")
-        .then((res) => setWazirxPrice(res.data.ticker.last))
-        .catch((err) => console.error("WazirX API Error:", err));
-    };
-
-    fetchData(); 
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const [binancePrice] = useState("45,230.50");
+  const [wazirxPrice] = useState("88,450.00");
 
   return (
     <div className="p-4">
@@ -34,7 +13,7 @@ export default function ExchangePrices() {
           <h3 className="text-lg font-semibold">Binance</h3>
           <p className="text-gray-600">BTC/USDT</p>
           <p className="text-green-600 text-xl font-bold">
-            {binancePrice ? `$${binancePrice}` : "Loading..."}
+            ${binancePrice}
           </p>
         </div>
 
@@ -43,7 +22,7 @@ export default function ExchangePrices() {
           <h3 className="text-lg font-semibold">WazirX</h3>
           <p className="text-gray-600">USDT/INR</p>
           <p className="text-blue-600 text-xl font-bold">
-            {wazirxPrice ? `₹${wazirxPrice}` : "Loading..."}
+            ₹{wazirxPrice}
           </p>
         </div>
       </div>

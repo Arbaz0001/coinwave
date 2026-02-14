@@ -179,15 +179,20 @@ export default function Mine() {
 
       try {
         setLoading(true);
+        // Construct API URL with /api prefix
+        const apiBase = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
         const res = await axios.get(
-          `${import.meta.env.VITE_API_URL}/wallet/user/${user._id}`
+          `${apiBase}/wallet/user/${user._id}`
         );
 
         if (res.data?.success) {
           setWallet(res.data.data);
+          console.log("✅ Wallet loaded:", res.data.data);
+        } else {
+          console.warn("⚠️ Wallet fetch failed:", res.data?.message);
         }
       } catch (err) {
-        console.error("Wallet fetch error:", err);
+        console.error("❌ Wallet fetch error:", err?.response?.status, err?.message);
       } finally {
         setLoading(false);
       }
