@@ -3,16 +3,26 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { initSocket, getSocket } from "../hooks/useSocket";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { API_CONFIG } from "../config/api.config";
 
 const NotificationContext = createContext();
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
+  // Try admin tokens first, then fall back to user tokens used across the app
   const token =
     localStorage.getItem("adminToken") ||
     localStorage.getItem("admin_token") ||
     localStorage.getItem("token") ||
-    localStorage.getItem("authToken");
+    localStorage.getItem("authToken") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("user_token") ||
+    (function () {
+      try {
+        const auth = JSON.parse(localStorage.getItem('auth') || '{}');
+        return auth?.accessToken || null;
+      } catch { return null; }
+    })();
 
   // Get userId from localStorage
   const getStoredUserId = () => {
@@ -37,7 +47,8 @@ export const NotificationProvider = ({ children }) => {
         }
 
         // Construct API URL with /api prefix
-        const apiBase = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
+        const apiBase = API_CONFIG.API_BASE;
+        console.log('🔍 Notification token present?', !!token);
         const res = await axios.get(`${apiBase}/notification/user/${userId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });

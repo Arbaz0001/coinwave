@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Check, X } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import { API_CONFIG } from "../config/api.config";
+
+const API_BASE = API_CONFIG.API_BASE;
 
 const Deposite = () => {
   const [deposits, setDeposits] = useState([]);
@@ -19,7 +22,7 @@ const Deposite = () => {
   const fetchDeposits = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/deposit/all`, {
+      const res = await axios.get(`${API_BASE}/admin/deposits`, {
         headers: getAuthHeader(),
       });
       if (res.data.success) {
@@ -41,7 +44,7 @@ const Deposite = () => {
     try {
       // 1️⃣ Update deposit status (backend auto-updates wallet)
       const res = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/deposit/${depositId}/approve`,
+        `${API_BASE}/admin/deposits/${depositId}/approve`,
         { remarks: "Approved by admin" },
         { headers: getAuthHeader() }
       );
@@ -62,7 +65,7 @@ const Deposite = () => {
   const handleReject = async (depositId) => {
     try {
       const res = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/deposit/${depositId}/reject`,
+        `${API_BASE}/admin/deposits/${depositId}/reject`,
         { rejectionReason: "Rejected by admin" },
         { headers: getAuthHeader() }
       );
@@ -85,16 +88,16 @@ const Deposite = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white px-4 py-8">
-      <h2 className="text-3xl font-bold text-center mb-8">Deposit Management</h2>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white px-2 sm:px-4 py-6 sm:py-8">
+      <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8">Deposit Management</h2>
 
       {/* Tabs */}
-      <div className="flex justify-center gap-3 mb-8">
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
         {["upi", "crypto"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-6 py-2 rounded-md font-medium ${
+            className={`px-4 sm:px-6 py-2 rounded-md font-medium text-sm sm:text-base ${
               activeTab === tab
                 ? "bg-blue-600 text-white"
                 : "bg-gray-700 hover:bg-gray-600"
@@ -105,40 +108,35 @@ const Deposite = () => {
         ))}
       </div>
 
-      {loading ? (
-        <p className="text-center text-gray-400">Loading deposits...</p>
-      ) : filteredDeposits.length === 0 ? (
+      {loading && <p className="text-center text-gray-400">Loading deposits...</p>}
+      {!loading && filteredDeposits.length === 0 && (
         <p className="text-center text-gray-400">No deposits found.</p>
-      ) : (
+      )}
+      {!loading && filteredDeposits.length > 0 && (
         <div className="flex flex-col gap-6 items-center">
-          {filteredDeposits.map((d) => (
+          {filteredDeposits.map((d) => {
+            let statusClass = "text-red-400";
+            if (d.status === "pending") statusClass = "text-yellow-400";
+            else if (d.status === "approved") statusClass = "text-green-400";
+
+            return (
             <div
               key={d._id}
-              className="bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-4xl border border-gray-700 hover:border-blue-500 transition"
+              className="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-4xl border border-gray-700 hover:border-blue-500 transition"
             >
               {/* Header */}
-              <div className="flex justify-between items-start mb-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                 <div className="space-y-1">
                   <p className="text-lg font-semibold text-blue-400">
                     ₹{d.amount} — {d.method.toUpperCase()}
                   </p>
                   <p className="text-sm text-gray-400">
                     Status:{" "}
-                    <span
-                      className={`font-medium ${
-                        d.status === "pending"
-                          ? "text-yellow-400"
-                          : d.status === "approved"
-                          ? "text-green-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {d.status.toUpperCase()}
-                    </span>
+                    <span className={`font-medium ${statusClass}`}>{d.status.toUpperCase()}</span>
                   </p>
                 </div>
                 {d.status === "pending" && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() =>
                         handleApprove(d._id, d.userId?._id || d.userId, d.amount)
@@ -220,7 +218,8 @@ const Deposite = () => {
                 <p>Created: {new Date(d.createdAt).toLocaleString()}</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

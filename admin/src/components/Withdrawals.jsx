@@ -2,6 +2,9 @@ import axios from "axios";
 import { ListCollapse } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { API_CONFIG } from "../config/api.config";
+
+const API_BASE = API_CONFIG.API_BASE;
 
 const Withdrawals = () => {
   const [withdrawals, setWithdrawals] = useState([]);
@@ -12,7 +15,7 @@ const Withdrawals = () => {
   const fetchWithdrawals = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/withdraws/all`);
+      const res = await axios.get(`${API_BASE}/withdraws/all`);
       if (res.data.success) {
         setWithdrawals(res.data.data);
       } else {
@@ -34,7 +37,7 @@ const Withdrawals = () => {
   const updateStatus = async (id, status) => {
     try {
       const res = await axios.put(
-        `${import.meta.env.VITE_API_URL}/withdraws/update/${id}`,
+        `${API_BASE}/withdraws/update/${id}`,
         { status }
       );
 
@@ -67,20 +70,20 @@ const Withdrawals = () => {
     : withdrawals;
 
   return (
-    <div className="md:min-w-4xl w-auto mx-auto px-4 py-10">
-      <h2 className="text-2xl font-bold text-center mb-6 text-gray-200">
+    <div className="w-full max-w-6xl mx-auto px-2 sm:px-4 py-6 sm:py-10">
+      <h2 className="text-xl sm:text-2xl font-bold text-center mb-6 text-gray-200">
         Withdrawal Requests (Admin)
       </h2>
 
       {/* 🔹 Filter buttons */}
-      <div className="mb-6 flex justify-center gap-4">
+      <div className="mb-6 flex flex-wrap justify-center gap-2 sm:gap-4">
         {["INR", "USDT", "ETH"].map((method) => (
           <button
             key={method}
             onClick={() =>
               setFilterMethod((prev) => (prev === method ? "" : method))
             }
-            className={`px-4 py-2 rounded-md border ${
+            className={`px-3 sm:px-4 py-2 rounded-md border text-sm sm:text-base ${
               filterMethod === method
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
@@ -105,7 +108,7 @@ const Withdrawals = () => {
               className="bg-white shadow-md rounded-lg overflow-hidden"
             >
               {/* Summary Row */}
-              <div className="p-4 border-b flex justify-between items-center flex-wrap gap-4">
+              <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="flex flex-col md:flex-row gap-4">
                   <p>
                     <strong>User:</strong> {w.userId?.fullName || "Unknown"}
@@ -132,19 +135,19 @@ const Withdrawals = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                   {/* Approve/Reject buttons */}
                   {w.status === "pending" && (
                     <>
                       <button
                         onClick={() => updateStatus(w._id, "approved")}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md"
+                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => updateStatus(w._id, "rejected")}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm"
                       >
                         Reject
                       </button>

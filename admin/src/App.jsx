@@ -9,17 +9,23 @@ import AllUsers from "./pages/AllUsers";
 import Deposits from "./components/Deposite";
 import Withdrawals from "./components/Withdrawals";
 import ReferAmount from "./components/ReferAmount";
-import TransactionHistory from "./components/TransactionHistory";
+// TransactionHistory removed per request
 import USDTTransactionHistory from "./components/USDTTransactionHistory";
 import QRCode from "./components/QRCode";
 import QRCodeCrypto from "./components/QRCodeCrypto";
-import AddNotification from "./components/addNotification";
+// Notification UI removed (replaced by Targeted Popup). Keep file for reference: ./components/addNotification
 import SupportSettings from "./components/SupportSettings";
+import TargetedPopupPage from "./pages/TargetedPopupPage";
+import SellNotificationPage from "./pages/SellNotificationPage";
+import BankAccountsManager from "./pages/BankAccountsManager";
+import SettingsManager from "./pages/SettingsManager";
+import ExchangePriceManager from "./pages/ExchangePriceManager";
+import AdminStatementManager from "./pages/AdminStatementManager";
 
 export default function App() {
   const { isLoggedIn, loading } = useAdminAuth();
   const [activeTab, setActiveTab] = useState("allusers");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // ✅ sidebar always open on desktop
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (!isLoggedIn) return <Navigate to="/admin/login" replace />;
@@ -27,14 +33,20 @@ export default function App() {
   // ✅ Clean Tab List (unwanted removed)
   const tabList = [
     { key: "allusers", label: "All Users", component: AllUsers },
+    { key: "settings", label: "⚙️ Settings", component: SettingsManager },
+    { key: "prices", label: "💱 Prices & Bonus", component: ExchangePriceManager },
+    { key: "statements", label: "📊 User Statements", component: AdminStatementManager },
+    { key: "bankaccounts", label: "🏦 Bank Accounts", component: BankAccountsManager },
     { key: "deposits", label: "Deposits", component: Deposits },
     { key: "withdrawals", label: "Withdrawals", component: Withdrawals },
     { key: "refer", label: "Refer Amount", component: ReferAmount },
-    { key: "history", label: "Transaction History", component: TransactionHistory },
+    // Transaction History tab removed
     { key: "usdt", label: "💱 USDT Transactions", component: USDTTransactionHistory },
     { key: "qrcode", label: "QR Code", component: QRCode },
     { key: "qrcodecrypto", label: "Crypto QR", component: QRCodeCrypto },
-    { key: "notification", label: "Notifications", component: AddNotification },
+    // notifications removed
+    { key: "targetedPopup", label: "Targeted Popup", component: TargetedPopupPage },
+    { key: "sellNotification", label: "🚫 Sell Restrictions", component: SellNotificationPage },
     { key: "admincontroller", label: "Support Settings", component: SupportSettings },
   ];
 
@@ -44,8 +56,8 @@ export default function App() {
     <div className="min-h-screen flex bg-gray-100 text-gray-900">
       {/* 🧱 Desktop Sidebar */}
       <div
-        className="hidden md:flex md:w-64 md:flex-col bg-gradient-to-b from-blue-600 to-indigo-700 
-        text-white shadow-xl p-4 fixed top-0 left-0 h-full overflow-y-auto"
+        className="hidden lg:flex lg:w-64 lg:flex-col bg-gradient-to-b from-blue-600 to-indigo-700 
+        text-white shadow-xl p-4 fixed top-0 left-0 h-full overflow-y-auto z-30"
       >
         <h2 className="text-2xl font-bold tracking-wide mb-6">Admin Panel</h2>
         <nav className="flex flex-col gap-2 pb-8">
@@ -53,7 +65,7 @@ export default function App() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-lg text-left transition-all duration-200 ${
+              className={`px-4 py-2.5 rounded-lg text-left transition-all duration-200 text-sm ${
                 activeTab === tab.key
                   ? "bg-white text-blue-700 font-semibold shadow-md"
                   : "hover:bg-blue-500"
@@ -68,69 +80,81 @@ export default function App() {
       {/* 📱 Mobile Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.aside
-            initial={{ x: -300 }}
-            animate={{ x: 0 }}
-            exit={{ x: -300 }}
-            transition={{ duration: 0.3 }}
-            className="fixed z-50 md:hidden w-64 h-screen bg-gradient-to-b from-blue-600 to-indigo-700 
-            text-white shadow-xl p-4"
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold tracking-wide">Admin Panel</h2>
-              <button onClick={() => setIsSidebarOpen(false)} className="md:hidden">
-                <X size={22} />
-              </button>
-            </div>
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
 
-            <nav className="flex flex-col gap-2">
-              {tabList.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => {
-                    setActiveTab(tab.key);
-                    setIsSidebarOpen(false);
-                  }}
-                  className={`px-4 py-2 rounded-lg text-left transition-all duration-200 ${
-                    activeTab === tab.key
-                      ? "bg-white text-blue-700 font-semibold shadow-md"
-                      : "hover:bg-blue-500"
-                  }`}
-                >
-                  {tab.label}
+            <motion.aside
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ duration: 0.3, type: "spring", damping: 25 }}
+              className="fixed inset-y-0 left-0 z-50 lg:hidden w-72 sm:w-80 bg-gradient-to-b from-blue-600 to-indigo-700 
+              text-white shadow-xl p-4 flex flex-col overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-wide">Admin Panel</h2>
+                <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden hover:bg-blue-500 rounded p-1">
+                  <X size={24} />
                 </button>
-              ))}
-            </nav>
-          </motion.aside>
+              </div>
+
+              <nav className="flex flex-col gap-2 pb-8">
+                {tabList.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => {
+                      setActiveTab(tab.key);
+                      setIsSidebarOpen(false);
+                    }}
+                    className={`px-4 py-2.5 rounded-lg text-left transition-all duration-200 text-sm ${
+                      activeTab === tab.key
+                        ? "bg-white text-blue-700 font-semibold shadow-md"
+                        : "hover:bg-blue-500"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
 
       {/* 🖥️ Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-64">
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-64 w-full">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white shadow-md sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+        <header className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white shadow-md sticky top-0 z-30">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="md:hidden bg-blue-600 text-white p-2 rounded-md"
+              className="lg:hidden bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition"
             >
-              <Menu size={22} />
+              <Menu size={20} />
             </button>
-            <h1 className="text-xl md:text-2xl font-bold text-blue-700">Admin Dashboard</h1>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-blue-700 truncate">Admin Dashboard</h1>
           </div>
-          <div className="text-sm text-gray-600">Welcome, Admin 👋</div>
+          <div className="hidden sm:block text-xs sm:text-sm text-gray-600">Welcome, Admin 👋</div>
         </header>
 
         {/* Page Content (Scrollable only here) */}
-        <main className="p-4 md:p-6 flex-1 overflow-y-auto">
+        <main className="p-3 sm:p-4 md:p-6 flex-1 overflow-y-auto bg-gray-50">
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.3 }}
+            className="w-full"
           >
-            <div className="bg-white rounded-xl shadow-md p-5 md:p-8">
+            <div className="bg-white rounded-xl shadow-md p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-auto">
               <CurrentTab />
             </div>
           </motion.div>

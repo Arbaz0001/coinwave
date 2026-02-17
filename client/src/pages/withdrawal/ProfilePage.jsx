@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Link } from "react-router-dom";
 import { useBalance } from "../../context/BalanceContext";
 import { Menu, Transition } from "@headlessui/react";
+import { API_CONFIG } from "../../config/api.config";
 
 // ✅ Reusable MenuLink Component
 const MenuLink = ({ to, href, active, children, onClick }) => {
@@ -43,7 +44,7 @@ export default function ProfilePage() {
     : Math.floor(Number(balance));
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/v1/users/visible-games`)
+    fetch(`${API_CONFIG.API_BASE}/v1/users/visible-games`)
       .then((response) => response.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {

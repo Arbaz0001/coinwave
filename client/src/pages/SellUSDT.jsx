@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { CheckCircle, ArrowLeft } from "lucide-react";
 import axiosInstance from "../utils/axiosInstance.js";
 import { toast } from "react-toastify";
+import SellNotificationModal from "../components/SellNotificationModal";
+import { API_CONFIG } from "../config/api.config";
 
 export default function SellUSDT() {
   // ===== STATE MANAGEMENT =====
   const [step, setStep] = useState(1); // 1: Bank 2: UPI 3: USDT Amount 4: Admin Scanners 5: Confirmation
-  const [loading, setLoading] = useState(false);
+  
   const [submitting, setSubmitting] = useState(false);
 
   // Bank Account Details
@@ -33,23 +35,10 @@ export default function SellUSDT() {
   const [adminAddress, setAdminAddress] = useState("");
 
   // ===== CONSTANTS =====
-  const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
-  const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "");
+  const BASE_URL = API_CONFIG.BASE_URL;
 
   const user = JSON.parse(localStorage.getItem("cw_user"));
   const userId = user?._id || user?.id || null;
-  
-  // Get token from various possible storage locations
-  let token =
-    localStorage.getItem("user_token") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("authToken");
-  
-  // Try the structured auth key
-  if (!token) {
-    const auth = JSON.parse(localStorage.getItem("auth") || "{}");
-    token = auth?.accessToken;
-  }
 
   const networks = {
     trc20: {
@@ -136,21 +125,36 @@ export default function SellUSDT() {
       return;
     }
 
-    if (!token) {
+    if (!userId) {
       toast.error("❌ Not authenticated. Please log in again.");
-      console.log("Token sources:", {
-        user_token: localStorage.getItem("user_token"),
-        accessToken: localStorage.getItem("accessToken"),
-        authToken: localStorage.getItem("authToken"),
-        auth_obj: JSON.parse(localStorage.getItem("auth") || "{}"),
-        cw_user: JSON.parse(localStorage.getItem("cw_user") || "{}"),
-      });
       return;
     }
-
-    console.log("✅ Token found:", token.substring(0, 20) + "...");
-      console.log("📤 API_BASE:", API_BASE);
     
+    // Before submitting, check for active sell notification
+    try {
+      const checkRes = await axiosInstance.get(`/api/sell/check-restriction`);
+      // if server returns 200 with data, a notification exists
+      console.log('✅ Sell notification check response:', checkRes.status, checkRes.data);
+      if (checkRes.status === 200 && checkRes.data?.success && checkRes.data.data) {
+        // show modal to user instead of proceeding
+        const sn = checkRes.data.data;
+        console.log('🚫 Sell notification found for user, showing modal:', sn);
+        setIsSellRestricted(true);
+        setPendingSellNotification(sn);
+        setShowSellNotification(true);
+        return; // stop submission
+      }
+    } catch (err) {
+      if (err?.response?.status === 204) {
+        console.log('✅ No sell notification (204)');
+        // no notification, continue
+      } else {
+        console.error("❌ Sell notification check failed, status:", err?.response?.status, err?.message);
+        console.error("Error response:", err?.response?.data);
+        // allow to continue in case of check failure
+      }
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -172,12 +176,11 @@ export default function SellUSDT() {
       console.log("📤 Sending payload:", payload);
       
       // Use axiosInstance which handles token refresh automatically
-      const response = await axiosInstance.post(
-        `/api/withdraws/usdt-sell`,
-        payload
-      );
+      const response = await axiosInstance.post(`/api/sell/submit`, payload);
+      console.log('📥 Sell response status:', response.status);
+      console.log('📦 Sell response data:', response.data);
 
-      if (response.data?.success) {
+      if (response?.data?.success) {
         toast.success("✅ Sell request submitted successfully!");
         // Reset form
         setBankAccount({
@@ -204,22 +207,68 @@ export default function SellUSDT() {
     }
   };
 
+  // Sell notification modal handlers
+  const [showSellNotification, setShowSellNotification] = useState(false);
+  const [pendingSellNotification, setPendingSellNotification] = useState(null);
+  const [isSellRestricted, setIsSellRestricted] = useState(false);
+
+  const handleSellPrimary = (url) => {
+    // redirect to support/help
+    globalThis.location.href = url || "/help-support";
+    // do not proceed with sell
+    setShowSellNotification(false);
+    setPendingSellNotification(null);
+    setIsSellRestricted(false);
+  };
+
+  // Check restriction on page open
+  useEffect(() => {
+    const checkOnOpen = async () => {
+      try {
+        const res = await axiosInstance.get(`/api/sell/check-restriction`);
+        console.log('📡 initial sell restriction check:', res.status, res.data);
+        if (res.status === 200 && res.data?.success && res.data.data) {
+          setPendingSellNotification(res.data.data);
+          setShowSellNotification(true);
+          setIsSellRestricted(true);
+        } else {
+          setIsSellRestricted(false);
+        }
+      } catch (err) {
+        if (err?.response?.status === 204) {
+          setIsSellRestricted(false);
+        } else {
+          console.error('❌ initial restriction check failed:', err?.response?.data || err.message);
+        }
+      }
+    };
+    checkOnOpen();
+  }, []);
+
+  const handleSellCancel = () => {
+    setShowSellNotification(false);
+    setPendingSellNotification(null);
+    setIsSellRestricted(false);
+  };
+
   // ===== STEP 1: BANK ACCOUNT =====
   if (step === 1) {
     return (
-      <div className="p-4 min-h-screen bg-white">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">💳 Sell USDT</h1>
+      <>
+      <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-3xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 text-gray-800">💳 Sell USDT</h1>
 
-        <div className="mb-6 p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
-          <h2 className="font-semibold text-gray-800 mb-3">🏦 Step 1: Bank Account</h2>
-          <p className="text-xs text-gray-600 mb-4">
+        <div className="mb-6 p-4 md:p-6 border-2 border-blue-300 rounded-xl bg-blue-50 shadow-sm">
+          <h2 className="font-semibold text-gray-800 mb-3 text-lg md:text-xl">🏦 Step 1: Bank Account</h2>
+          <p className="text-xs md:text-sm text-gray-600 mb-4">
             Add your bank account to receive INR payment
           </p>
 
           <div className="space-y-3">
             {/* Bank Name */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                 Bank Name
               </label>
               <input
@@ -229,7 +278,7 @@ export default function SellUSDT() {
                 onChange={(e) =>
                   setBankAccount({ ...bankAccount, bankName: e.target.value })
                 }
-                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-blue-500"
+                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 md:py-3 text-sm md:text-base text-gray-700 focus:outline-none focus:border-blue-500"
               />
             </div>
 
@@ -307,26 +356,39 @@ export default function SellUSDT() {
 
         <button
           onClick={() => validateBankAccount() && setStep(2)}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+          className="w-full py-3 md:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all text-base md:text-lg shadow-lg hover:shadow-xl"
         >
           Next: Enter UPI ID
         </button>
+        </div>
       </div>
+      {/* Sell notification modal */}
+      <SellNotificationModal
+        open={showSellNotification}
+        title={pendingSellNotification?.title}
+        message={pendingSellNotification?.message}
+        buttonText={pendingSellNotification?.buttonText}
+        redirectUrl={pendingSellNotification?.redirectUrl}
+        onPrimary={handleSellPrimary}
+        onCancel={handleSellCancel}
+      />
+      </>
     );
   }
 
   // ===== STEP 2: UPI =====
   if (step === 2) {
     return (
-      <div className="p-4 min-h-screen bg-white">
+      <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setStep(1)}
-            className="text-gray-600 hover:text-gray-800"
+            className="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft size={24} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">UPI ID</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">UPI ID</h1>
         </div>
 
         <div className="mb-6 p-4 border-2 border-green-300 rounded-lg bg-green-50">
@@ -365,10 +427,11 @@ export default function SellUSDT() {
         <button
           onClick={() => validateUpi() && setStep(3)}
           disabled={!upiId.trim()}
-          className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+          className="w-full py-3 md:py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-xl font-semibold transition-all text-base md:text-lg shadow-lg hover:shadow-xl"
         >
           Next: Enter USDT Amount
         </button>
+        </div>
       </div>
     );
   }
@@ -376,15 +439,16 @@ export default function SellUSDT() {
   // ===== STEP 3: USDT AMOUNT & NETWORK =====
   if (step === 3) {
     return (
-      <div className="p-4 min-h-screen bg-white">
+      <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setStep(2)}
-            className="text-gray-600 hover:text-gray-800"
+            className="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft size={24} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">USDT Amount & Network</h1>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">USDT Amount & Network</h1>
         </div>
 
         {/* USDT Amount */}
@@ -400,9 +464,12 @@ export default function SellUSDT() {
             className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:border-purple-500 text-lg"
           />
           {usdtAmount && Number(usdtAmount) > 0 && (
-            <div className="mt-4 p-3 bg-purple-100 border border-purple-300 rounded-lg">
-              <p className="text-xs text-gray-700">USDT to Sell:</p>
-              <p className="text-2xl font-bold text-purple-700">{Number(usdtAmount).toFixed(2)} USDT</p>
+            <div className="mt-4 space-y-3">
+              {/* USDT Amount Display */}
+              <div className="p-3 bg-purple-100 border border-purple-300 rounded-lg">
+                <p className="text-xs text-gray-700">USDT to Sell:</p>
+                <p className="text-2xl font-bold text-purple-700">{Number(usdtAmount).toFixed(2)} USDT</p>
+              </div>
             </div>
           )}
         </div>
@@ -417,15 +484,15 @@ export default function SellUSDT() {
               Which network will you send USDT from?
             </p>
 
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {Object.entries(networks).map(([key, data]) => (
                 <div
                   key={key}
                   onClick={() => setSelectedNetwork(key)}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${
+                  className={`p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${
                     selectedNetwork === key
-                      ? "border-blue-600 bg-blue-100"
-                      : "border-gray-300 hover:border-gray-400"
+                      ? "border-blue-600 bg-blue-100 shadow-md"
+                      : "border-gray-300 hover:border-blue-300"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -446,10 +513,11 @@ export default function SellUSDT() {
         <button
           onClick={() => setStep(4)}
           disabled={!usdtAmount || Number(usdtAmount) <= 0}
-          className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+          className="w-full py-3 md:py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-xl font-semibold transition-all text-base md:text-lg shadow-lg hover:shadow-xl"
         >
           Next: Admin Scanners
         </button>
+        </div>
       </div>
     );
   }
@@ -457,15 +525,16 @@ export default function SellUSDT() {
   // ===== STEP 4: ADMIN SCANNERS =====
   if (step === 4) {
     return (
-      <div className="p-4 min-h-screen bg-white">
+      <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setStep(3)}
-            className="text-gray-600 hover:text-gray-800"
+            className="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft size={24} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Admin Scanners</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Admin Scanners</h1>
         </div>
 
         {/* Summary */}
@@ -497,7 +566,7 @@ export default function SellUSDT() {
                         : `${BASE_URL}${networkQrCode.imageUrl}`
                     }
                     alt={networkQrCode.network}
-                    className="w-48 h-48 object-contain mx-auto"
+                    className="w-48 h-48 md:w-64 md:h-64 object-contain mx-auto"
                   />
                 </div>
               )}
@@ -537,10 +606,11 @@ export default function SellUSDT() {
 
         <button
           onClick={() => setStep(5)}
-          className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition"
+          className="w-full py-3 md:py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all text-base md:text-lg shadow-lg hover:shadow-xl"
         >
           Next: Enter Transaction Details
         </button>
+        </div>
       </div>
     );
   }
@@ -548,15 +618,16 @@ export default function SellUSDT() {
   // ===== STEP 5: CONFIRMATION =====
   if (step === 5) {
     return (
-      <div className="p-4 min-h-screen bg-white">
+      <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setStep(4)}
-            className="text-gray-600 hover:text-gray-800"
+            className="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft size={24} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Confirm Transaction</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Confirm Transaction</h1>
         </div>
 
         {/* Order Summary */}
@@ -622,22 +693,23 @@ export default function SellUSDT() {
 
         <button
           onClick={handleSubmitSell}
-          disabled={submitting || !transactionHash.trim()}
-          className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition mb-3"
+          disabled={submitting || !transactionHash.trim() || isSellRestricted}
+          className="w-full py-3 md:py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-xl font-semibold transition-all text-base md:text-lg shadow-lg hover:shadow-xl mb-3"
         >
           {submitting ? "Processing..." : "✅ Confirm & Submit"}
         </button>
 
-        <div className="p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-          <p className="text-xs text-gray-700">
+        <div className="p-4 md:p-6 bg-yellow-50 border border-yellow-300 rounded-xl shadow-sm">
+          <p className="text-xs md:text-sm text-gray-700">
             <span className="font-semibold">📋 Checklist before submitting:</span>
           </p>
-          <ul className="text-xs text-gray-600 mt-2 space-y-1">
+          <ul className="text-xs md:text-sm text-gray-600 mt-2 space-y-1">
             <li>✓ Send {usdtAmount} USDT from your wallet to admin address</li>
             <li>✓ Copy transaction hash from blockchain explorer</li>
             <li>✓ Paste transaction hash above</li>
             <li>✓ Admin will verify and send ₹ to your UPI</li>
           </ul>
+        </div>
         </div>
       </div>
     );

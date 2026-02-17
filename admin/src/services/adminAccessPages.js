@@ -1,9 +1,10 @@
 import axios from "axios";
+import { API_CONFIG } from "../config/api.config";
 
 export const getAdminAccessPages = async () => {
   try {
     const res = await axios.get(
-      `${import.meta.env.VITE_API_URL}/api/v1/admin/access-pages`,
+      `${API_CONFIG.API_BASE}/v1/admin/access-pages`,
       {
         headers: {
           Authorization: `${localStorage.getItem("accessToken")}`, // Add token if required

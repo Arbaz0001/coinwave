@@ -1,6 +1,10 @@
 import { UploadCloudIcon, FileIcon, XIcon, Trash2Icon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { API_CONFIG } from "../config/api.config";
+
+const API_BASE = API_CONFIG.API_BASE;
+const BASE_URL = API_CONFIG.BASE_URL;
 
 const QRCode = () => {
   const [qrImage, setQrImage] = useState(null);
@@ -13,8 +17,7 @@ const QRCode = () => {
   // ✅ Fetch existing QR Codes
   const fetchQrCodes = async () => {
     try {
-      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
-      const res = await fetch(`${baseApi}/qrcode/qr-codes`);
+      const res = await fetch(`${API_BASE}/qrcode/qr-codes`);
       const data = await res.json();
       if (data.success) setQrCodes(data.data);
     } catch (err) {
@@ -62,8 +65,7 @@ const QRCode = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this QR code?")) return;
     try {
-      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
-      const res = await fetch(`${baseApi}/qrcode/delete-qr/${id}`, {
+      const res = await fetch(`${API_BASE}/qrcode/delete-qr/${id}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -93,8 +95,7 @@ const QRCode = () => {
       formData.append("image", qrImage); // ✅ Field name fixed
       formData.append("type", "UPI");
 
-      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
-      const res = await fetch(`${baseApi}/qrcode/qr`, {
+      const res = await fetch(`${API_BASE}/qrcode/qr`, {
         method: "POST",
         body: formData,
       });
@@ -206,7 +207,7 @@ const QRCode = () => {
                   src={
                     qr.imageUrl.startsWith("http")
                       ? qr.imageUrl
-                      : `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api${qr.imageUrl}`
+                      : `${BASE_URL}${qr.imageUrl}`
                   }
                        alt={qr.title}
                          className="w-auto object-contain mb-2"

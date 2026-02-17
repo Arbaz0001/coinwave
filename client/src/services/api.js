@@ -1,10 +1,14 @@
 // src/services/api.js
 import axios from "axios";
+import { API_CONFIG } from "../config/api.config";
 
-const baseURL = import.meta.env.VITE_API_URL || "https://api.coinpay0.com/api";
+const API_URL = API_CONFIG.API_BASE;
+
+console.log("Running on:", globalThis.location.hostname);
+console.log("API Base URL:", API_CONFIG.API_BASE);
 
 const api = axios.create({
-  baseURL,
+  baseURL: API_URL,
   timeout: 10000, // prevent hanging requests
 });
 
@@ -12,12 +16,23 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     try {
+      const accessToken =
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("user_token") ||
+        localStorage.getItem("token") ||
+        null;
+
       const raw = localStorage.getItem("auth");
       if (raw) {
         const auth = JSON.parse(raw);
         if (auth?.accessToken) {
           config.headers.Authorization = `Bearer ${auth.accessToken}`;
+          return config;
         }
+      }
+
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
       }
     } catch (e) {
       console.error("❌ Error parsing auth token:", e);
@@ -38,7 +53,7 @@ api.interceptors.response.use(
         console.warn("⚠️ Unauthorized! Clearing auth and redirecting...");
         localStorage.removeItem("auth");
         // Optional: redirect to login
-        window.location.href = "/login";
+        globalThis.location.href = "/login";
       }
     }
     return Promise.reject(error);

@@ -1,6 +1,10 @@
 import { UploadCloudIcon, FileIcon, XIcon, Trash2Icon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { API_CONFIG } from "../config/api.config";
+
+const API_BASE = API_CONFIG.API_BASE;
+const BASE_URL = API_CONFIG.BASE_URL;
 
 const QRCodeCrypto = () => {
   const [qrImage, setQrImage] = useState(null);
@@ -16,8 +20,7 @@ const QRCodeCrypto = () => {
   // ✅ Fetch all existing crypto QR codes
   const fetchQrCodes = async () => {
     try {
-      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
-      const res = await fetch(`${baseApi}/crypto-qrcode/all`);
+      const res = await fetch(`${API_BASE}/crypto-qrcode/all`);
       const data = await res.json();
 
       if (data.success) {
@@ -72,8 +75,7 @@ const QRCodeCrypto = () => {
       return;
 
     try {
-      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
-      const res = await fetch(`${baseApi}/crypto-qrcode/delete/${id}`, {
+      const res = await fetch(`${API_BASE}/crypto-qrcode/delete/${id}`, {
         method: "DELETE",
       });
 
@@ -109,8 +111,7 @@ const QRCodeCrypto = () => {
       formData.append("cryptoType", cryptoType);
         formData.append("address", address);
 
-      const baseApi = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`;
-      const res = await fetch(`${baseApi}/crypto-qrcode/upload`, {
+      const res = await fetch(`${API_BASE}/crypto-qrcode/upload`, {
         method: "POST",
         body: formData,
       });
@@ -279,7 +280,7 @@ const QRCodeCrypto = () => {
                   src={
                     qr.imageUrl.startsWith("http")
                       ? qr.imageUrl
-                      : `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api${qr.imageUrl}`
+                      : `${BASE_URL}${qr.imageUrl}`
                   }
                   alt={qr.title}
                   className="w-auto object-contain mb-2"

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import { API_CONFIG } from "../config/api.config";
 
 const AuthContext = createContext();
 
@@ -37,7 +38,7 @@ export const AuthProvider = ({ children }) => {
  const login = async (data) => {
   try {
     const res = await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/auth/login`,
+      `${API_CONFIG.API_BASE}/auth/login`,
       data
     );
 
@@ -46,10 +47,12 @@ export const AuthProvider = ({ children }) => {
     const newAuth = { user, accessToken, refreshToken };
     setAuth(newAuth);
 
+    // Store all tokens consistently
     localStorage.setItem("auth", JSON.stringify(newAuth));
     localStorage.setItem("cw_user", JSON.stringify(user));
-    localStorage.setItem("user_token", accessToken);
-    localStorage.setItem("accessToken", accessToken); // for interceptor
+    localStorage.setItem("accessToken", accessToken); // Primary token for interceptor
+    localStorage.setItem("refreshToken", refreshToken); // For token refresh
+    localStorage.setItem("user_token", accessToken); // Legacy support
 
     console.log("✅ User stored successfully:", user);
 
@@ -66,6 +69,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("auth");
     localStorage.removeItem("cw_user");
     localStorage.removeItem("user_token");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    sessionStorage.clear();
+    globalThis.location.replace("/login");
   };
 
   return (

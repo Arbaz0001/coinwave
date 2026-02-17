@@ -49,17 +49,71 @@ const AllUsers = () => {
     }));
   };
 
+  const handleBalanceAdjust = async (userId, direction) => {
+    try {
+      const originalUser = users.find((u) => u._id === userId);
+      const editedUser = editedUsers[userId] || {};
+
+      const baseBalance = Number(
+        editedUser.walletBalance ?? originalUser?.walletBalance ?? 0
+      );
+      const delta = Number(editedUser.balanceDelta ?? 0);
+
+      if (Number.isNaN(delta) || delta <= 0) {
+        return toast.error("Enter a valid amount to adjust");
+      }
+
+      const nextBalance = direction === "add"
+        ? baseBalance + delta
+        : baseBalance - delta;
+
+      if (nextBalance < 0) {
+        return toast.error("Balance cannot be negative");
+      }
+
+      await AdminAPI.setUserBalance(userId, nextBalance);
+      toast.success("✅ Balance updated");
+      loadUsers();
+      setEditedUsers((prev) => ({
+        ...prev,
+        [userId]: { ...prev[userId], walletBalance: nextBalance },
+      }));
+    } catch (err) {
+      console.error("Balance adjust error:", err.response || err);
+      toast.error(err.response?.data?.message || "Error updating balance ❌");
+    }
+  };
+
   // ✅ Save updated user
   const handleSave = async (userId) => {
     try {
+      const originalUser = users.find((u) => u._id === userId);
+      const editedUser = editedUsers[userId] || {};
+
       // send password only if admin entered a new one
-      const payload = { ...editedUsers[userId] };
+      const payload = { ...editedUser };
       // Remove immutable or internal fields that should not be sent
       delete payload._id;
       delete payload.createdAt;
       delete payload.__v;
+      delete payload.walletBalance;
       if (!payload.password) delete payload.password;
-      await AdminAPI.updateUser(userId, payload);
+
+      const nextBalance = Number(
+        editedUser.walletBalance ?? originalUser?.walletBalance ?? 0
+      );
+      const originalBalance = Number(originalUser?.walletBalance ?? 0);
+      const hasUserFields = ["fullName", "email", "phoneNumber", "password"].some(
+        (field) => payload[field] != null && payload[field] !== originalUser?.[field]
+      );
+      const balanceChanged = !Number.isNaN(nextBalance) && nextBalance !== originalBalance;
+
+      if (hasUserFields) {
+        await AdminAPI.updateUser(userId, payload);
+      }
+      if (balanceChanged) {
+        await AdminAPI.setUserBalance(userId, nextBalance);
+      }
       toast.success("✅ User updated successfully");
       loadUsers();
       setEditMode((prev) => ({ ...prev, [userId]: false }));
@@ -89,6 +143,8 @@ const AllUsers = () => {
       FullName: u.fullName,
       Email: u.email,
       Phone: u.phoneNumber,
+      PasswordHash: u.password || "",
+      WalletBalance: Number(u.walletBalance ?? 0),
       CreatedAt: new Date(u.createdAt).toLocaleString(),
     }));
 
@@ -100,13 +156,13 @@ const AllUsers = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+    <div className="w-full bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800 mb-3 sm:mb-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-800">
           👥 All Registered Users
         </h1>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
           <label className="flex items-center space-x-2 text-gray-700 text-sm sm:text-base">
             <input
               type="checkbox"
@@ -119,7 +175,7 @@ const AllUsers = () => {
 
           <button
             onClick={handleExportToExcel}
-            className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-md shadow-md transition text-sm sm:text-base"
+            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-md shadow-md transition text-sm sm:text-base"
           >
             ⬇️ Export Excel
           </button>
@@ -130,30 +186,31 @@ const AllUsers = () => {
       {loading ? (
         <div className="text-center py-10 text-gray-500">Loading users...</div>
       ) : (
-        <div className="overflow-x-auto shadow-lg rounded-lg bg-white">
-          <table className="min-w-full border border-gray-200 rounded-lg">
-            <thead className="bg-gray-100 text-gray-700 uppercase text-xs sm:text-sm">
+        <div className="w-full overflow-x-auto shadow-lg rounded-lg bg-white">
+          <table className="min-w-full w-full border border-gray-200 rounded-lg">
+            <thead className="bg-gray-100 text-gray-700 uppercase text-xs sm:text-sm sticky top-0">
               <tr>
-                <th className="p-3 border text-center">#</th>
-                <th className="p-3 border text-left">Full Name</th>
-                {showSensitiveData && <th className="p-3 border text-left">Email</th>}
-                {showSensitiveData && <th className="p-3 border text-left">Phone</th>}
-                <th className="p-3 border text-left">Password</th>
-                <th className="p-3 border text-center">Actions</th>
+                <th className="p-2 sm:p-3 border text-center">#</th>
+                <th className="p-2 sm:p-3 border text-left whitespace-nowrap">Full Name</th>
+                {showSensitiveData && <th className="p-2 sm:p-3 border text-left whitespace-nowrap">Email</th>}
+                {showSensitiveData && <th className="p-2 sm:p-3 border text-left whitespace-nowrap">Phone</th>}
+                <th className="p-2 sm:p-3 border text-left whitespace-nowrap">Wallet Balance</th>
+                {showSensitiveData && <th className="p-2 sm:p-3 border text-left whitespace-nowrap">Password</th>}
+                <th className="p-2 sm:p-3 border text-center whitespace-nowrap">Actions</th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="text-xs sm:text-sm">
               {users.length > 0 ? (
                 users.map((user, index) => (
                   <tr
                     key={user._id}
-                    className="border-b hover:bg-gray-50 transition text-sm sm:text-base"
+                    className="border-b hover:bg-gray-50 transition"
                   >
-                    <td className="p-3 text-center">{index + 1}</td>
+                    <td className="p-2 sm:p-3 text-center border whitespace-nowrap">{index + 1}</td>
 
                     {/* Full Name */}
-                    <td className="p-3">
+                    <td className="p-2 sm:p-3 border">
                       {editMode[user._id] ? (
                         <input
                           type="text"
@@ -161,10 +218,10 @@ const AllUsers = () => {
                           onChange={(e) =>
                             handleChange(user._id, "fullName", e.target.value)
                           }
-                          className="border p-1 w-full rounded"
+                          className="border p-1 w-full rounded text-xs sm:text-sm"
                         />
                       ) : (
-                        <span className="font-medium text-gray-800">
+                        <span className="font-medium text-gray-800 whitespace-nowrap">
                           {user.fullName}
                         </span>
                       )}
@@ -172,7 +229,7 @@ const AllUsers = () => {
 
                     {/* Email */}
                     {showSensitiveData && (
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3 border">
                         {editMode[user._id] ? (
                           <input
                             type="email"
@@ -180,17 +237,17 @@ const AllUsers = () => {
                             onChange={(e) =>
                               handleChange(user._id, "email", e.target.value)
                             }
-                            className="border p-1 w-full rounded"
+                            className="border p-1 w-full rounded text-xs sm:text-sm"
                           />
                         ) : (
-                          <span className="text-gray-700 break-words">{user.email}</span>
+                          <span className="text-gray-700">{user.email}</span>
                         )}
                       </td>
                     )}
 
                     {/* Phone */}
                     {showSensitiveData && (
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3 border">
                         {editMode[user._id] ? (
                           <input
                             type="text"
@@ -198,61 +255,117 @@ const AllUsers = () => {
                             onChange={(e) =>
                               handleChange(user._id, "phoneNumber", e.target.value)
                             }
-                            className="border p-1 w-full rounded"
+                            className="border p-1 w-full rounded text-xs sm:text-sm"
                           />
                         ) : (
-                          <span className="text-gray-700 break-words">{user.phoneNumber}</span>
+                          <span className="text-gray-700 whitespace-nowrap">{user.phoneNumber}</span>
                         )}
                       </td>
                     )}
 
-                    {/* Password */}
-                    <td className="p-3 text-gray-500 font-mono text-xs break-all">
+                    {/* Wallet Balance */}
+                    <td className="p-2 sm:p-3 border">
                       {editMode[user._id] ? (
-                        <input
-                          type="text"
-                          placeholder="New password (leave blank to keep)"
-                          value={editedUsers[user._id]?.password || ""}
-                          onChange={(e) =>
-                            handleChange(user._id, "password", e.target.value)
-                          }
-                          className="border p-1 w-full rounded"
-                        />
+                        <div className="space-y-2 min-w-[200px]">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={
+                              editedUsers[user._id]?.walletBalance ??
+                              user.walletBalance ??
+                              0
+                            }
+                            onChange={(e) =>
+                              handleChange(user._id, "walletBalance", e.target.value)
+                            }
+                            className="border p-1 w-full rounded text-xs sm:text-sm"
+                          />
+                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Adjust amount"
+                              value={editedUsers[user._id]?.balanceDelta ?? ""}
+                              onChange={(e) =>
+                                handleChange(user._id, "balanceDelta", e.target.value)
+                              }
+                              className="border p-1 flex-1 min-w-[80px] rounded text-xs sm:text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleBalanceAdjust(user._id, "add")}
+                              className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
+                            >
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBalanceAdjust(user._id, "deduct")}
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
+                            >
+                              - Deduct
+                            </button>
+                          </div>
+                        </div>
                       ) : (
-                        <span title={user.password}>{user.password || "N/A"}</span>
+                        <span className="text-gray-700 font-semibold whitespace-nowrap">
+                          ₹ {Number(user.walletBalance ?? 0).toFixed(2)}
+                        </span>
                       )}
                     </td>
 
+                    {/* Password */}
+                    {showSensitiveData && (
+                      <td className="p-2 sm:p-3 border text-gray-500 font-mono">
+                        {editMode[user._id] ? (
+                          <input
+                            type="text"
+                            placeholder="New password (optional)"
+                            value={editedUsers[user._id]?.password || ""}
+                            onChange={(e) =>
+                              handleChange(user._id, "password", e.target.value)
+                            }
+                            className="border p-1 w-full rounded text-xs sm:text-sm min-w-[150px]"
+                          />
+                        ) : (
+                          <span className="text-xs" title={user.password}>
+                            {user.password ? "*****" : "N/A"}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {/* Actions */}
-                    <td className="p-3 text-center space-x-2">
+                    <td className="p-2 sm:p-3 border text-center">
+                      <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2 min-w-[100px]">
                       {editMode[user._id] ? (
                         <button
                           onClick={() => handleSave(user._id)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs sm:text-sm"
+                          className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm whitespace-nowrap"
                         >
                           Save
                         </button>
                       ) : (
                         <button
                           onClick={() => handleEditToggle(user._id)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs sm:text-sm"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm whitespace-nowrap"
                         >
                           Edit
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(user._id)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs sm:text-sm"
+                        className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm whitespace-nowrap"
                       >
                         Delete
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={showSensitiveData ? 6 : 4}
+                    colSpan={showSensitiveData ? 7 : 4}
                     className="p-6 text-center text-gray-500"
                   >
                     No users found.

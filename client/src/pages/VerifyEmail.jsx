@@ -52,15 +52,20 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
-          Verify Your Email
-        </h2>
-        <p className="text-gray-600 text-center mb-6">
-          We’ve sent a verification code to <br />
-          <span className="font-semibold">{email}</span>
-        </p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-blue-100 to-pink-100 px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full max-w-md bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 md:w-20 md:h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl md:text-4xl">📬</span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+            Verify Your Email
+          </h2>
+          <p className="text-gray-600 text-sm md:text-base">
+            We've sent a verification code to
+          </p>
+          <p className="font-semibold text-purple-600 mt-1 text-sm md:text-base break-all">{email}</p>
+        </div>
 
         {errorMsg && (
           <div className="mb-4 text-red-600 text-center font-medium">

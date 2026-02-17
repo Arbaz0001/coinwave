@@ -41,8 +41,11 @@ export const createUSDTSell = async (req, res) => {
     const { userId, usdtAmount, network, bankAccount, upiId, userSendingWallet, transactionHash, adminAddress, message } =
       req.body;
 
+    console.log('📤 [DEBUG] createUSDTSell called with userId:', userId, 'amount:', usdtAmount);
+
     // ✅ Validation
     if (!userId || !usdtAmount || !network || !bankAccount?.accountNumber || !upiId) {
+      console.warn('⚠️ [DEBUG] Missing required fields');
       return res.status(400).json({
         success: false,
         message: "Missing required fields (userId, usdtAmount, network, bankAccount, upiId)",
@@ -59,6 +62,7 @@ export const createUSDTSell = async (req, res) => {
     // ✅ Check user exists
     const user = await User.findById(userId);
     if (!user) {
+      console.error('❌ User not found:', userId);
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -111,6 +115,7 @@ export const createUSDTSell = async (req, res) => {
 export const getAllWithdraws = async (req, res) => {
   try {
     const { status, method, page, limit } = req.query;
+    console.log("✅ [DEBUG] GET /api/withdraws/all - Fetching withdrawals with filters:", { status, method, page, limit });
     
     // Build filter
     const filter = {};
@@ -130,6 +135,8 @@ export const getAllWithdraws = async (req, res) => {
     const totalCount = await Withdraw.countDocuments(filter);
     const totalPages = Math.ceil(totalCount / pageSize);
 
+    console.log(`✅ [DEBUG] Found ${withdraws.length} withdrawals (total: ${totalCount})`);
+
     res.json({
       success: true,
       data: withdraws,
@@ -138,6 +145,7 @@ export const getAllWithdraws = async (req, res) => {
       currentPage: pageNum,
     });
   } catch (error) {
+    console.error("❌ [ERROR] Failed to fetch withdrawals:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to fetch withdraws",
@@ -161,7 +169,7 @@ export const updateWithdrawStatus = async (req, res) => {
     await withdraw.save();
 
     // 💸 If approved → deduct from wallet
-    if (status === "approved") {
+    if (status === "approved" && withdraw.method !== "USDT_SELL") {
       const wallet = await Wallet.findOne({ userId: withdraw.userId });
       if (wallet && wallet.balance >= withdraw.amount) {
         wallet.balance -= withdraw.amount;

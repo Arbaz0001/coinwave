@@ -24,7 +24,15 @@ import depositRoutes from "./routes/depositRoutes.js";
 import qrCodeRoutes from "./routes/qrCodeRoutes.js";
 import qrcodeCryptoRoutes from "./routes/qrcodeCryptoRoutes.js";
 import notificationRoutes from "./routes/notification.routes.js"; // if you create it
+import popupRoutes from "./routes/popupRoutes.js";
+import targetedPopupRoutes from "./routes/targetedPopupRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
+import sellNotificationRoutes from "./routes/sellNotificationRoutes.js";
+import referAmountRoutes from "./routes/referAmountRoutes.js";
+import sellRoutes from "./routes/sellRoutes.js";
+import bankAccountRoutes from "./routes/bankAccountRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -102,7 +110,15 @@ app.use("/api/crypto-qrcode", qrcodeCryptoRoutes);
 
 // if you create notification routes, mount them:
 app.use("/api/notification", notificationRoutes);
+app.use("/api/popups", popupRoutes);
+app.use("/api/targeted-popups", targetedPopupRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/sell-notification", sellNotificationRoutes);
+app.use("/api/sell", sellRoutes);
+app.use("/api/v1", referAmountRoutes);
+app.use("/api/bank-accounts", bankAccountRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/exchange-rates", exchangeRateRoutes);
 
 // ✅ Static file serving for uploads: /uploads/filename
 // This allows frontend to load images like /uploads/qr-1234567.png
@@ -139,9 +155,10 @@ io.use((socket, next) => {
     const decoded = jwt.verify(token.replace(/^Bearer\s+/i, ""), process.env.JWT_SECRET || "your_jwt_secret");
     // attach user info to socket (if your token contains user id)
     socket.user = decoded;
-    if (decoded && decoded._id) {
+    const userRoomId = decoded?._id || decoded?.id;
+    if (userRoomId) {
       // join room for this user so server can target specific users later
-      socket.join(String(decoded._id));
+      socket.join(String(userRoomId));
     }
     return next();
   } catch (err) {

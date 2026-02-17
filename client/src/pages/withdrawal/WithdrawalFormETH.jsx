@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { API_CONFIG } from "../../config/api.config";
 
 const WithdrawalFormETH = () => {
   const [formData, setFormData] = useState({
@@ -9,9 +10,9 @@ const WithdrawalFormETH = () => {
   });
   const [showPopup, setShowPopup] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("cw_user") || localStorage.getItem("user") || "null");
   const accessToken = localStorage.getItem("accessToken");
-  const userId = user?._id;
+  const userId = user?._id || user?.id;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,8 +24,14 @@ const WithdrawalFormETH = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!userId) {
+      console.error("Missing userId: please login again");
+      return;
+    }
+
     try {
-      const apiBase = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
+      const apiBase = API_CONFIG.API_BASE;
       await axios.post(
         `${apiBase}/withdraws/create`,
         {

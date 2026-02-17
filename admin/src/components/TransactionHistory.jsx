@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_CONFIG } from "../config/api.config";
+
+const BASE_URL = API_CONFIG.BASE_URL;
 
 const TransactionHistory = () => {
   const [transactions, setTransactions] = useState([]);
@@ -32,7 +35,7 @@ const TransactionHistory = () => {
       if (filterStatus !== "all") params.status = filterStatus;
 
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/transactions`,
+        `${BASE_URL}/transactions`,
         {
           params,
           headers: {
@@ -78,7 +81,7 @@ const TransactionHistory = () => {
     try {
       setActionLoading(id);
       setError(null);
-      const url = `${import.meta.env.VITE_API_URL}/transactions/${id}/${action}`;
+      const url = `${BASE_URL}/transactions/${id}/${action}`;
       await axios.put(url, {}, { headers: { ...getAuthHeader() } });
       // refresh current page
       fetchTransactions(page);
@@ -107,8 +110,9 @@ const TransactionHistory = () => {
       {/* Filters */}
       <div className="w-full max-w-3xl flex gap-3 mb-4">
         <div>
-          <label className="block text-sm mb-1">Type</label>
+          <label htmlFor="filter-type" className="block text-sm mb-1">Type</label>
           <select
+            id="filter-type"
             value={filterTxType}
             onChange={(e) => setFilterTxType(e.target.value)}
             className="px-3 py-2 bg-gray-800 rounded"
@@ -120,8 +124,9 @@ const TransactionHistory = () => {
         </div>
 
         <div>
-          <label className="block text-sm mb-1">Status</label>
+          <label htmlFor="filter-status" className="block text-sm mb-1">Status</label>
           <select
+            id="filter-status"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="px-3 py-2 bg-gray-800 rounded"

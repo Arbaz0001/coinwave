@@ -7,6 +7,7 @@ import { MessageCircle, X } from "lucide-react";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HelpSupport from "./pages/HelpSupport";
+import TargetedPopupManager from "./components/TargetedPopupManager";
 
 // main pages
 import Home from "./pages/Home";
@@ -33,7 +34,7 @@ import ExchangePrices from "./components/ExchangePrices";
 // mine sub-pages
 import ExchangeHistory from "./pages/ExchangeHistory";
 import Statement from "./pages/Statement";
-import BankAccount from "./pages/BankAccount";
+import BankAccountPage from "./pages/BankAccountPage";
 
 export default function App() {
   const [showSupport, setShowSupport] = useState(false);
@@ -41,7 +42,8 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-6">
+      <TargetedPopupManager />
+      <main className="flex-grow w-full mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 max-w-7xl">
         <Routes>
           {/* Public Routes */}
           {/* <Route path="/" element={<Home />} /> */}
@@ -181,7 +183,7 @@ export default function App() {
             path="/bank-account"
             element={
               <ProtectedRoute>
-                <BankAccount />
+                <BankAccountPage />
               </ProtectedRoute>
             }
           />
@@ -196,23 +198,23 @@ export default function App() {
         </Routes>
       </main>
 
-      <footer className="bg-white border-t py-4 text-center">
+      <footer className="bg-white border-t py-3 sm:py-4 text-center text-sm sm:text-base px-4">
         © {new Date().getFullYear()} Coinpay - Built by Arbaz Sheikh
       </footer>
 
       {/* Fixed Support Button - Shows on Every Page */}
       <button
         onClick={() => setShowSupport(true)}
-        className="fixed bottom-6 right-6 z-40 bg-green-600 hover:bg-green-700 text-white p-4 rounded-full shadow-xl transition transform hover:scale-110 flex items-center justify-center"
+        className="fixed bottom-20 right-4 sm:right-6 z-50 bg-green-600 hover:bg-green-700 text-white p-3 sm:p-4 rounded-full shadow-xl transition transform hover:scale-110 flex items-center justify-center"
         title="Help & Support"
       >
-        <MessageCircle size={28} />
+        <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7" />
       </button>
 
       {/* Support Modal */}
       {showSupport && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-gray-900 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
+          <div className="bg-gray-900 rounded-xl w-[95%] sm:w-[90%] md:w-[80%] lg:w-[70%] max-w-3xl max-h-[90vh] overflow-y-auto relative">
             {/* Close Button */}
             <button
               onClick={() => setShowSupport(false)}

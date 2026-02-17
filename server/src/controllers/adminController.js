@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Withdrawal from "../models/Withdraw.js";
 import Notification from "../models/Notification.js";
 import User from "../models/User.js";
@@ -264,7 +265,11 @@ export const approveDepositRequest = async (req, res) => {
 
     // Update deposit
     deposit.status = "approved";
-    deposit.approvedBy = req.user._id;
+    const rawAdminId = req.user?._id || req.user?.id || null;
+    const adminObjectId = mongoose.Types.ObjectId.isValid(rawAdminId) ? rawAdminId : null;
+    if (adminObjectId) {
+      deposit.approvedBy = adminObjectId;
+    }
     deposit.approvedAt = new Date();
     if (remarks) deposit.remarks = remarks;
     await deposit.save();
@@ -274,16 +279,28 @@ export const approveDepositRequest = async (req, res) => {
     if (!wallet) {
       wallet = await Wallet.create({ userId: deposit.userId, balance: 0 });
     }
-    wallet.balance += Number(deposit.amount);
+    const amountToAdd = Number(deposit.amount);
+    if (!Number.isFinite(amountToAdd)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid deposit amount",
+      });
+    }
+    wallet.balance += amountToAdd;
     await wallet.save();
 
     // Create notification
-    await Notification.create({
-      title: "Deposit Approved ✅",
-      message: `Your deposit of ₹${deposit.amount} (${deposit.method}) has been approved!`,
-      userId: deposit.userId,
-      createdBy: req.user._id,
-    });
+    try {
+      await Notification.create({
+        title: "Deposit Approved ✅",
+        message: `Your deposit of ₹${deposit.amount} (${deposit.method}) has been approved!`,
+        userId: deposit.userId,
+        createdBy: adminObjectId || null,
+      });
+    } catch (notifError) {
+      console.error("❌ approveDepositRequest notification error:", notifError.message || notifError);
+      // don't fail approval if notification fails
+    }
 
     console.log(`✅ Deposit ${depositId} approved. Wallet updated.`);
 
@@ -331,18 +348,27 @@ export const rejectDepositRequest = async (req, res) => {
 
     // Update deposit
     deposit.status = "rejected";
-    deposit.rejectedBy = req.user._id;
+    const rawAdminId = req.user?._id || req.user?.id || null;
+    const adminObjectId = mongoose.Types.ObjectId.isValid(rawAdminId) ? rawAdminId : null;
+    if (adminObjectId) {
+      deposit.rejectedBy = adminObjectId;
+    }
     deposit.rejectedAt = new Date();
     deposit.rejectionReason = rejectionReason;
     await deposit.save();
 
     // Create notification
-    await Notification.create({
-      title: "Deposit Rejected ❌",
-      message: `Your deposit of ₹${deposit.amount} was rejected. Reason: ${rejectionReason}`,
-      userId: deposit.userId,
-      createdBy: req.user._id,
-    });
+    try {
+      await Notification.create({
+        title: "Deposit Rejected ❌",
+        message: `Your deposit of ₹${deposit.amount} was rejected. Reason: ${rejectionReason}`,
+        userId: deposit.userId,
+        createdBy: adminObjectId || null,
+      });
+    } catch (notifError) {
+      console.error("❌ rejectDepositRequest notification error:", notifError.message || notifError);
+      // don't fail rejection if notification fails
+    }
 
     console.log(`❌ Deposit ${depositId} rejected`);
 

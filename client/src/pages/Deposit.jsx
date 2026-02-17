@@ -1,6 +1,7 @@
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { API_CONFIG } from "../config/api.config";
 
 const Deposit = () => {
   const [method, setMethod] = useState("UPI");
@@ -14,8 +15,8 @@ const Deposit = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // ✅ API Base URL
-  const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
-  const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "");
+  const API_BASE = API_CONFIG.API_BASE;
+  const BASE_URL = API_CONFIG.BASE_URL;
 
   // ✅ Get current user
   const user = JSON.parse(localStorage.getItem("cw_user"));
@@ -94,18 +95,12 @@ const Deposit = () => {
 
     setSubmitting(true);
     try {
-      const response = await axios.post(
+      const response = await axiosInstance.post(
         `${API_BASE}/deposit/upi`,
         {
           userId,
           amount: Number(amount),
           transactionId,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("user_token")}`,
-          },
         }
       );
 
@@ -146,7 +141,7 @@ const Deposit = () => {
 
     setSubmitting(true);
     try {
-      const response = await axios.post(
+      const response = await axiosInstance.post(
         `${API_BASE}/deposit/crypto`,
         {
           userId,
@@ -154,12 +149,6 @@ const Deposit = () => {
           cryptoType,
           network,
           transactionHash,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("user_token")}`,
-          },
         }
       );
 
@@ -261,29 +250,29 @@ const Deposit = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-4 md:py-8 px-4 md:px-6">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Make a Deposit</h1>
-          <p className="text-gray-600">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">💵 Make a Deposit</h1>
+          <p className="text-sm md:text-base text-gray-600">
             Choose your preferred payment method and submit your transaction details
           </p>
         </div>
 
         {/* Method Selection */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-6">
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
             Select Payment Method
           </h2>
 
-          <div className="flex gap-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
             {["UPI", "Crypto"].map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMethod(m)}
-                className={`flex-1 px-6 py-3 rounded-lg font-medium transition ${
+                className={`flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl font-medium transition-all text-sm md:text-base ${
                   method === m
                     ? "bg-blue-600 text-white shadow-lg"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -296,20 +285,20 @@ const Deposit = () => {
         </div>
 
         {/* Method-specific content */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
           {method === "UPI" ? (
             <>
               {/* UPI QR Code */}
-              <div className="mb-8 pb-8 border-b">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              <div className="mb-6 md:mb-8 pb-6 md:pb-8 border-b">
+                <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
                   Step 1: Scan QR Code
                 </h3>
                 {renderUPIQR()}
               </div>
 
               {/* UPI Form */}
-              <form onSubmit={handleUPISubmit} className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              <form onSubmit={handleUPISubmit} className="space-y-4 md:space-y-5">
+                <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
                   Step 2: Submit Transaction Details
                 </h3>
 
@@ -350,9 +339,9 @@ const Deposit = () => {
                 <button
                   type="submit"
                   disabled={submitting || !amount || !transactionId}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="w-full bg-blue-600 text-white py-3 md:py-4 rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl text-base md:text-lg"
                 >
-                  {submitting ? "Submitting..." : "Submit UPI Deposit"}
+                  {submitting ? "Submitting..." : "✅ Submit UPI Deposit"}
                 </button>
               </form>
             </>
@@ -390,15 +379,15 @@ const Deposit = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Blockchain Network
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2 md:gap-3">
                     {["trc20", "erc20", "bep20"].map((net) => (
                       <button
                         key={net}
                         type="button"
                         onClick={() => setNetwork(net)}
-                        className={`px-3 py-2 rounded-lg font-medium text-sm transition ${
+                        className={`px-3 py-2 md:py-3 rounded-lg font-medium text-xs md:text-sm transition-all ${
                           network === net
-                            ? "bg-blue-600 text-white"
+                            ? "bg-blue-600 text-white shadow-md"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
@@ -418,8 +407,8 @@ const Deposit = () => {
               </div>
 
               {/* Crypto Form */}
-              <form onSubmit={handleCryptoSubmit} className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              <form onSubmit={handleCryptoSubmit} className="space-y-4 md:space-y-5">
+                <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
                   Step 3: Submit Transaction Details
                 </h3>
 
@@ -460,18 +449,18 @@ const Deposit = () => {
                 <button
                   type="submit"
                   disabled={submitting || !amount || !transactionHash}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="w-full bg-blue-600 text-white py-3 md:py-4 rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl text-base md:text-lg"
                 >
-                  {submitting ? "Submitting..." : "Submit Crypto Deposit"}
+                  {submitting ? "Submitting..." : "✅ Submit Crypto Deposit"}
                 </button>
               </form>
             </>
           )}
 
           {/* Info Box */}
-          <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-semibold text-blue-900 mb-2">ℹ️ What happens next?</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
+          <div className="mt-6 md:mt-8 p-4 md:p-5 bg-blue-50 border border-blue-200 rounded-xl">
+            <h4 className="font-semibold text-blue-900 mb-2 text-sm md:text-base">ℹ️ What happens next?</h4>
+            <ul className="text-xs md:text-sm text-blue-800 space-y-1">
               <li>✓ Your deposit request will be reviewed by our admin team</li>
               <li>✓ Once verified, funds will be added to your wallet</li>
               <li>✓ You'll receive a notification when your deposit is approved</li>

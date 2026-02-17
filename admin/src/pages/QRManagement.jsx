@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import upload from "../services/api";
+import { API_CONFIG } from "../config/api.config";
 
 const QRManagement = () => {
   const [upiQRs, setUpiQRs] = useState([]);
@@ -22,8 +23,8 @@ const QRManagement = () => {
   const [walletAddress, setWalletAddress] = useState("");
   const [cryptoImage, setCryptoImage] = useState(null);
 
-  const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
-  const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "");
+  const API_BASE = API_CONFIG.API_BASE;
+  const BASE_URL = API_CONFIG.BASE_URL;
 
   // ✅ Fetch all QRs
   useEffect(() => {

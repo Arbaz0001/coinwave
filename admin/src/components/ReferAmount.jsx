@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_CONFIG } from "../config/api.config";
 
-const API = `${import.meta.env.VITE_API_URL}/api/v1/refer-amount`;
+const API = `${API_CONFIG.API_BASE}/v1/refer-amount`;
 
 const ReferAmount = () => {
   const [amounts, setAmounts] = useState([]);
@@ -31,7 +32,7 @@ const ReferAmount = () => {
     if (!newAmount.trim()) return;
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/refer-amount`,
+        API,
         { amount: newAmount }
       );
       const added = res.data.data || res.data; // adjust shape

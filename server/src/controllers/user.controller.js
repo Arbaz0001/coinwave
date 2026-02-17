@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiError } from "../utils/apiError.js";
 import { generateOTP, sendEmail } from "../utils/otpService.js";
 import  User  from "../models/User.js";
+import Wallet from "../models/Wallet.js";
 import { otpLogs } from "../models/otpLogs.model.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
@@ -407,10 +408,23 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 // Get all users
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}, "fullName email phoneNumber createdAt");
+    const users = await User.find({}, "fullName email phoneNumber password createdAt").lean();
+    const userIds = users.map((u) => u._id);
+    const wallets = await Wallet.find({ userId: { $in: userIds } })
+      .select("userId balance")
+      .lean();
+
+    const walletMap = new Map(
+      wallets.map((wallet) => [String(wallet.userId), wallet.balance])
+    );
+
+    const usersWithBalances = users.map((user) => ({
+      ...user,
+      walletBalance: walletMap.get(String(user._id)) ?? 0,
+    }));
     res.status(200).json({
       success: true,
-      users,
+      users: usersWithBalances,
     });
   } catch (err) {
     console.error("Error fetching users:", err);
@@ -455,6 +469,149 @@ const getAllUsers = async (req, res) => {
 
 // updateAccountDetails
 
+// ✅ Get user's saved bank details from latest withdrawal
+const getUserBankDetails = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    // Import models dynamically to avoid circular dependencies
+    const SellHistory = (await import("../models/SellHistory.js")).default;
+    
+    // Find latest withdrawal with bank details
+    const latestWithdrawal = await SellHistory.findOne({ 
+      userId, 
+      "bankAccount.accountNumber": { $exists: true, $ne: null } 
+    })
+      .sort({ createdAt: -1 })
+      .select("bankAccount")
+      .lean();
+
+    if (!latestWithdrawal || !latestWithdrawal.bankAccount) {
+      return res.status(200).json({ 
+        success: true, 
+        data: null,
+        message: "No bank details found" 
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: latestWithdrawal.bankAccount,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching bank details:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch bank details",
+      error: error.message,
+    });
+  }
+};
+
+// ✅ Get user's transaction statement (deposits + withdrawals)
+const getUserStatement = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const Transaction = (await import("../models/Transaction.js")).default;
+    const transactions = await Transaction.find({ userId })
+      .select("amount transactionType status type createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    let formattedTransactions = transactions.map((transaction) => ({
+      id: transaction._id,
+      type: transaction.transactionType,
+      amount: Number(transaction.amount || 0),
+      status: transaction.status === "success" ? "completed" : transaction.status,
+      method: transaction.type === "upi" ? "UPI" : "Crypto",
+      date: transaction.createdAt,
+      reference: transaction._id,
+    }));
+
+    if (formattedTransactions.length === 0) {
+      const Deposit = (await import("../models/Deposit.js")).default;
+      const Withdraw = (await import("../models/Withdraw.js")).default;
+
+      const [deposits, withdraws] = await Promise.all([
+        Deposit.find({ userId })
+          .select("amount status method upiDetails.transactionId cryptoDetails.transactionHash createdAt")
+          .lean(),
+        Withdraw.find({ userId })
+          .select("amount status method details.transactionHash createdAt")
+          .lean(),
+      ]);
+
+      const depositTransactions = deposits.map((deposit) => ({
+        id: deposit._id,
+        type: "deposit",
+        amount: Number(deposit.amount || 0),
+        status: deposit.status === "approved" ? "completed" : deposit.status,
+        method: deposit.method || "Deposit",
+        date: deposit.createdAt,
+        reference:
+          deposit?.upiDetails?.transactionId ||
+          deposit?.cryptoDetails?.transactionHash ||
+          deposit._id,
+      }));
+
+      const withdrawTransactions = withdraws.map((withdraw) => ({
+        id: withdraw._id,
+        type: "withdraw",
+        amount: Number(withdraw.amount || 0),
+        status: withdraw.status === "approved" ? "completed" : withdraw.status,
+        method: withdraw.method || "Withdraw",
+        date: withdraw.createdAt,
+        reference: withdraw?.details?.transactionHash || withdraw._id,
+      }));
+
+      formattedTransactions = [...depositTransactions, ...withdrawTransactions].sort(
+        (first, second) => new Date(second.date) - new Date(first.date)
+      );
+    }
+
+    const totalDeposits = formattedTransactions
+      .filter(
+        (transaction) =>
+          transaction.type === "deposit" && ["success", "approved", "completed"].includes(transaction.status)
+      )
+      .reduce((sum, transaction) => sum + (transaction.amount || 0), 0);
+
+    const totalWithdrawals = formattedTransactions
+      .filter(
+        (transaction) =>
+          transaction.type === "withdraw" && ["success", "approved", "completed"].includes(transaction.status)
+      )
+      .reduce((sum, transaction) => sum + (transaction.amount || 0), 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        transactions: formattedTransactions,
+        summary: {
+          totalDeposits,
+          totalWithdrawals,
+          netBalance: totalDeposits - totalWithdrawals,
+          totalTransactions: formattedTransactions.length,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error fetching user statement:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch statement",
+      error: error.message,
+    });
+  }
+};
+
  
 
 export {
@@ -471,4 +628,6 @@ export {
   getAllUsers,
   deleteUser,
   updateAccountDetails,
+  getUserBankDetails,
+  getUserStatement,
 };

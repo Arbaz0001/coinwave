@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { getSocket } from '../hooks/useSocket';
+import { API_CONFIG } from '../config/api.config';
+
+const API_BASE = API_CONFIG.API_BASE;
 
 const USDTTransactionHistory = () => {
   const [activeTab, setActiveTab] = useState("buy"); // buy | sell
@@ -32,8 +36,9 @@ const USDTTransactionHistory = () => {
       };
       if (filterStatus !== "all") params.status = filterStatus;
 
+      console.log("📥 Fetching buy requests with params:", params);
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/deposits/all`,
+        `${API_BASE}/deposit/all`,
         {
           params,
           headers: getAuthHeader(),
@@ -43,30 +48,31 @@ const USDTTransactionHistory = () => {
       const txs = response.data?.data || [];
       const pages = response.data?.totalPages || 1;
 
+      console.log(`✅ Fetched ${txs.length} buy requests, total pages: ${pages}`);
       setTransactions(txs);
       setTotalPages(pages);
       setPage(pageNumber);
     } catch (err) {
-      console.error("Fetch buy requests error:", err);
+      console.error("❌ Fetch buy requests error:", err);
       toast.error("Failed to fetch buy requests");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Fetch Sell USDT Requests (from Withdraw model)
+  // ✅ Fetch Sell USDT Requests (from SellHistory model)
   const fetchSellRequests = async (pageNumber = 1) => {
     setLoading(true);
     try {
       const params = {
         page: pageNumber,
         limit: PAGE_SIZE,
-        method: "USDT_SELL",
       };
       if (filterStatus !== "all") params.status = filterStatus;
 
+      console.log("📤 Fetching sell requests with params:", params);
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/withdraws/all`,
+        `${API_BASE}/sell/history`,
         {
           params,
           headers: getAuthHeader(),
@@ -74,13 +80,17 @@ const USDTTransactionHistory = () => {
       );
 
       const txs = response.data?.data || [];
-      const pages = response.data?.totalPages || 1;
+      const pages = response.data?.pagination?.pages || 1;
 
+      console.log(`✅ Fetched ${txs.length} sell requests, total pages: ${pages}`);
+      if (txs.length > 0) {
+        console.log("Sample sell request:", txs[0]);
+      }
       setTransactions(txs);
       setTotalPages(pages);
       setPage(pageNumber);
     } catch (err) {
-      console.error("Fetch sell requests error:", err);
+      console.error("❌ Fetch sell requests error:", err);
       toast.error("Failed to fetch sell requests");
     } finally {
       setLoading(false);
@@ -91,15 +101,31 @@ const USDTTransactionHistory = () => {
   const approveBuyRequest = async (id, action) => {
     try {
       setActionLoading(id);
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/deposits/approve/${id}`,
-        { status: action }, // approve | reject
-        { headers: getAuthHeader() }
-      );
+      console.log(`🔄 Processing buy request ${action}:`, id);
+      
+      if (action === "approved") {
+        // Approve endpoint
+        console.log(`📤 Calling approve endpoint for ${id}`);
+        await axios.put(
+          `${API_BASE}/deposit/${id}/approve`,
+          { remarks: "Approved by admin" }, // remarks optional
+          { headers: getAuthHeader() }
+        );
+      } else if (action === "rejected") {
+        // Reject endpoint with rejection reason
+        console.log(`📤 Calling reject endpoint for ${id}`);
+        await axios.put(
+          `${API_BASE}/deposit/${id}/reject`,
+          { rejectionReason: "Rejected by admin" }, // rejection reason required
+          { headers: getAuthHeader() }
+        );
+      }
+      
+      console.log(`✅ Buy request ${action}ed successfully`);
       toast.success(`✅ Buy request ${action}ed successfully`);
       fetchBuyRequests(page);
     } catch (err) {
-      console.error(`${action} error:`, err);
+      console.error(`❌ ${action} error:`, err.response?.data || err.message);
       toast.error(err.response?.data?.message || `Failed to ${action} request`);
     } finally {
       setActionLoading(null);
@@ -110,15 +136,20 @@ const USDTTransactionHistory = () => {
   const approveSellRequest = async (id, action) => {
     try {
       setActionLoading(id);
+      console.log(`🔄 Processing sell request ${action}:`, id);
+      
+      console.log(`📤 Calling ${action} endpoint for sell request ${id}`);
       await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/withdraws/update/${id}`,
+        `${API_BASE}/sell/history/${id}/status`,
         { status: action }, // approved | rejected
         { headers: getAuthHeader() }
       );
+      
+      console.log(`✅ Sell request ${action}ed successfully`);
       toast.success(`✅ Sell request ${action}ed successfully`);
       fetchSellRequests(page);
     } catch (err) {
-      console.error(`${action} error:`, err);
+      console.error(`❌ ${action} error:`, err.response?.data || err.message);
       toast.error(err.response?.data?.message || `Failed to ${action} request`);
     } finally {
       setActionLoading(null);
@@ -134,6 +165,33 @@ const USDTTransactionHistory = () => {
       fetchSellRequests(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Listen for real-time new sells from socket
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handler = (data) => {
+      console.log('⚡ newSell event received:', data);
+      // If admin is viewing sell tab, prepend new sell
+      if (activeTab === 'sell') {
+        const tx = {
+          _id: data.sellId,
+          userId: data.userId,
+          amount: data.amount,
+          network: data.network,
+          status: data.status,
+          createdAt: data.createdAt,
+        };
+        setTransactions((prev) => [tx, ...prev]);
+        setTotalPages((p) => p); // no change, just trigger rerender
+      }
+      toast.info(`New sell: ${data.userId?.fullName || data.userId?.email} - ${data.amount} ${data.network}`);
+    };
+
+    socket.on('newSell', handler);
+    return () => socket.off('newSell', handler);
   }, [activeTab]);
 
   // Fetch on page or filter change
@@ -253,12 +311,11 @@ const USDTTransactionHistory = () => {
     const isPending = tx.status === "pending";
     const userFullName = tx.userId?.fullName || "Unknown User";
     const amount = tx.amount || 0;
-    const details = tx.details || {};
-    const network = details.network || "Unknown";
-    const txHash = details.transactionHash || "N/A";
-    const upiId = details.upiId || "N/A";
-    const bankName = details.bankAccount?.bankName || "N/A";
-    const accountHolder = details.bankAccount?.accountHolderName || "N/A";
+    const network = tx.network || "Unknown";
+    const txHash = tx.transactionHash || "N/A";
+    const upiId = tx.upiId || "N/A";
+    const bankName = tx.bankAccount?.bankName || "N/A";
+    const accountHolder = tx.bankAccount?.accountHolderName || "N/A";
 
     return (
       <div

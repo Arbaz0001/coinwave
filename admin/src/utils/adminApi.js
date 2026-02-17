@@ -1,9 +1,15 @@
 // src/utils/adminApi.js
 import axios from "axios";
+import { API_CONFIG } from "../config/api.config";
+
+// ----------------- SMART BASE URL -----------------
+const baseURL = API_CONFIG.BASE_URL;
+
+console.log("Running on:", window.location.hostname);
+console.log("API Base URL:", API_CONFIG.BASE_URL);
 
 const API = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL || "http://localhost:5000",
+  baseURL,
   withCredentials: true,
 });
 
@@ -31,10 +37,10 @@ API.interceptors.request.use((config) => {
 
 // ----------------- ADMIN LOGIN -----------------
 export const loginAdmin = async ({ identifier, password }) => {
-  const { data } = await API.post(
-    "/api/admin/login",
-    { identifier, password }
-  );
+  const { data } = await API.post("/api/admin/login", {
+    identifier,
+    password,
+  });
   return data;
 };
 
@@ -51,6 +57,15 @@ export const updateUser = async (id, userData) => {
 
 export const deleteUser = async (id) => {
   const { data } = await API.delete(`/api/admin/users/${id}`);
+  return data;
+};
+
+// ----------------- WALLET -----------------
+export const setUserBalance = async (userId, amount) => {
+  const { data } = await API.put(
+    `/api/balance/admin/${userId}/set`,
+    { amount }
+  );
   return data;
 };
 

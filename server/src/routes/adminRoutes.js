@@ -97,9 +97,9 @@ router.delete("/qr-codes/:qrId", permit("admin", "superadmin"), deleteQrCode);
 router.get("/crypto-qr-codes", permit("admin", "superadmin"), getCryptoQrCodes);
 router.delete("/crypto-qr-codes/:qrId", permit("admin", "superadmin"), deleteCryptoQrCode);
 
-// ================== COUPON & NOTIFICATION ==================
+// ================== COUPON ==================
 router.post("/coupon", permit("admin", "superadmin"), createCoupon);
-router.post("/notification", permit("admin", "superadmin"), sendNotification);
+// NOTE: Admin notification route removed per request — use existing Notification model usages elsewhere
 
 export default router;
 

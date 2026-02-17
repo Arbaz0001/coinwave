@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import { BadgeIndianRupee, Club, School, Trophy, User, X } from "lucide-react";
+import { API_CONFIG } from "../config/api.config";
 
 const BottomBar = ({ hidden }) => {
   const [open, setOpen] = useState(false);
@@ -10,7 +11,7 @@ const BottomBar = ({ hidden }) => {
 
   console.log(user);
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/v1/users/visible-games`)
+    fetch(`${API_CONFIG.API_BASE}/v1/users/visible-games`)
       .then((response) => response.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {

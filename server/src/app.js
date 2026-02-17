@@ -10,6 +10,9 @@ import userRoutes from "./routes/user.routes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import balanceRoutes from "./routes/balanceRoutes.js";
+import bankAccountRoutes from "./routes/bankAccountRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
 import { authMiddleware } from "./middlewares/authMiddleware.js";
 
 const app = express();
@@ -22,6 +25,9 @@ app.use(morgan("dev"));
 
 // ✅ USDT / Rates
 app.use("/api/rates", usdtRoutes);
+
+// ✅ Exchange Rates (Binance, Wazirx, INR Bonus)
+app.use("/api/exchange-rates", exchangeRateRoutes);
 
 // ✅ Authentication
 app.use("/api/auth", authRoutes);
@@ -37,6 +43,12 @@ app.use("/api/v1/pending-payments", paymentRoutes);
 
 // ✅ Balance Management
 app.use("/api/v1/balance", balanceRoutes);
+
+// ✅ Bank Accounts
+app.use("/api/bank-accounts", bankAccountRoutes);
+
+// ✅ Settings
+app.use("/api/settings", settingsRoutes);
 
 // ----------------- ROOT -----------------
 app.get("/", (req, res) => {

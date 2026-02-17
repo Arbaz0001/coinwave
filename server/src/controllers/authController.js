@@ -198,6 +198,8 @@ export const login = async (req, res) => {
         phoneNumber: user.phoneNumber,
         role: user.role,
         isVerified: user.isVerified,
+        ref_id: user.ref_id,
+        walletBalance: user.walletBalance,
       },
     });
   } catch (err) {
@@ -318,7 +320,16 @@ export const verifyOtp = async (req, res) => {
       success: true,
       message: "OTP verified successfully!",
       email: user.email,
-      verified: user.isVerified
+      verified: user.isVerified,
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        ref_id: user.ref_id,
+        walletBalance: user.walletBalance,
+      }
     });
 
   } catch (err) {

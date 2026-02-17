@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { API_CONFIG } from "../config/api.config";
 
 const DepositRequests = () => {
   const [deposits, setDeposits] = useState([]);
@@ -12,7 +13,7 @@ const DepositRequests = () => {
   const [remarks, setRemarks] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
+  const API_BASE = API_CONFIG.API_BASE;
 
   // ✅ Fetch all deposits
   useEffect(() => {

@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import { API_CONFIG } from "../config/api.config";
 
 // Build API base correctly and use /api prefix
-const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
-const API = `${API_BASE}/notification`;
+const API_BASE = API_CONFIG.API_BASE;
+// prefer admin endpoint when admin token present
+const API = `${API_BASE}/admin/notification`;
 
 const AddNotification = () => {
   const [title, setTitle] = useState("");
@@ -48,7 +50,6 @@ const AddNotification = () => {
         },
         body: JSON.stringify(payload),
       });
-
       const data = await res.json().catch(() => null);
 
       if (res.ok) {
@@ -57,7 +58,9 @@ const AddNotification = () => {
         setMessage("");
         setTargetUserId("");
       } else {
-        setStatus(`❌ Error: ${data?.message || data?.error || res.statusText}`);
+        // show detailed error when available
+        const errMsg = data?.message || data?.error || data?.errors || res.statusText;
+        setStatus(`❌ Error: ${JSON.stringify(errMsg)}`);
       }
     } catch (err) {
       console.error("Notification send error:", err);

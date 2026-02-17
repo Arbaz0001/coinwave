@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { Mail, Phone, Send } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import { API_CONFIG } from "../config/api.config";
 
 const SupportSettings = () => {
   const { admin } = useAdminAuth();
@@ -17,7 +18,7 @@ const SupportSettings = () => {
     description: "",
   });
 
-  const API_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, "") + "/api";
+  const API_BASE = API_CONFIG.API_BASE;
 
   const getAuthHeader = () => {
     const token = admin?.token || localStorage.getItem("admin_token");

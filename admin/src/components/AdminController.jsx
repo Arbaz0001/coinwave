@@ -2,6 +2,7 @@ import axios from "axios"; // make sure this is at the top
 import React, { useState } from "react";
 // import AdminTable from "./AdminTable";
 import { toast } from "react-toastify";
+import { API_CONFIG } from "../config/api.config";
 
 const ACCESS_PAGES = [
   "transaction",
@@ -61,7 +62,7 @@ const AdminController = () => {
 
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/admin/add-admin`,
+        `${API_CONFIG.API_BASE}/v1/admin/add-admin`,
         payload
       );
 
