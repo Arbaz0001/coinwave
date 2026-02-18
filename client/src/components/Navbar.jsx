@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.jpeg";
-import { MessageCircle, Home, RefreshCcw, User } from "lucide-react"; // icons
+import { MessageCircle, Home, RefreshCcw, User, Briefcase } from "lucide-react"; // icons
 
 export default function Navbar() {
   const location = useLocation();
@@ -46,6 +46,18 @@ export default function Navbar() {
         >
           <RefreshCcw className="w-5 h-5 sm:w-6 sm:h-6" />
           <span className="mt-0.5">Exchange</span>
+        </Link>
+
+        <Link
+          to="/investment"
+          className={`flex flex-col items-center text-xs sm:text-sm transition ${
+            location.pathname === "/investment" || location.pathname === "/my-investments"
+              ? "text-blue-600"
+              : "text-gray-600"
+          }`}
+        >
+          <Briefcase className="w-5 h-5 sm:w-6 sm:h-6" />
+          <span className="mt-0.5">Pack</span>
         </Link>
 
         <Link

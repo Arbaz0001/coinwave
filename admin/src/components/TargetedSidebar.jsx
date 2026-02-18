@@ -16,7 +16,7 @@ export default function TargetedSidebar({ users, selectedId, onSelect, collapsed
       {/* Sidebar */}
       <aside className={`${
         collapsed ? 'hidden md:block' : 'block'
-      } md:block w-full max-h-[70vh] md:max-h-screen md:w-72 bg-gradient-to-b from-slate-800 to-slate-900 text-white md:border-r border-slate-700 overflow-hidden flex flex-col`}>
+      } md:block w-full md:w-80 max-h-[70vh] md:max-h-none md:h-full bg-gradient-to-b from-slate-800 to-slate-900 text-white md:border-r border-slate-700 flex flex-col min-h-0`}>
         {/* Header */}
         <div className="p-4 border-b border-slate-700 flex items-center justify-between sticky top-0 bg-slate-800">
           <h3 className="font-bold text-lg">👥 Users</h3>
@@ -24,7 +24,7 @@ export default function TargetedSidebar({ users, selectedId, onSelect, collapsed
         </div>
 
         {/* User List */}
-        <div className="overflow-y-auto flex-1 min-h-0">
+        <div className="overflow-y-scroll flex-1 min-h-0">
           {users && users.length > 0 ? (
             <div className="space-y-1 p-2">
               {users.map((u) => (

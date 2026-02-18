@@ -15,6 +15,11 @@ const qrCodeSchema = new mongoose.Schema(
       enum: ["UPI", "Crypto"],
       default: "UPI",
     },
+    upiId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   { timestamps: true }
 );

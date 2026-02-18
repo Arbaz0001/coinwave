@@ -128,6 +128,7 @@ export const getAllWithdraws = async (req, res) => {
 
     const withdraws = await Withdraw.find(filter)
       .populate("userId", "fullName email phoneNumber")
+      .populate("bankAccountId")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageSize);

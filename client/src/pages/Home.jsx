@@ -1,21 +1,59 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import hero from "../assets/homebitkoin.jpg";
 import bitCoinCard from "../assets/bitCoinCard.png";
 import coinJar from "../assets/coinJar.png";
 import coinExpert from "../assets/coinExpert.png";
-import { useAuth } from "../context/AuthContext";
-
-const Navbar = () => {
-  const { user } = useAuth();
-  console.log("Current user:", user);
-  return <div>{user ? `Welcome ${user.fullName}` : "Not logged in"}</div>;
-};
+import { getExchangeRates } from "../services/exchangeRateService";
 
 
 export default function Home() {
+  const [rates, setRates] = useState({
+    binancePrice: null,
+    waziraxPrice: null,
+    inrBonusPercent: null,
+  });
+  const [ratesLoading, setRatesLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadRates = async () => {
+      try {
+        setRatesLoading(true);
+        const response = await getExchangeRates();
+        const data = response?.data || {};
+
+        if (!mounted) return;
+        setRates({
+          binancePrice: Number.isFinite(Number(data.binancePrice)) ? Number(data.binancePrice) : null,
+          waziraxPrice: Number.isFinite(Number(data.waziraxPrice)) ? Number(data.waziraxPrice) : null,
+          inrBonusPercent: Number.isFinite(Number(data.inrBonusPercent)) ? Number(data.inrBonusPercent) : null,
+        });
+      } catch {
+        if (!mounted) return;
+        setRates({
+          binancePrice: null,
+          waziraxPrice: null,
+          inrBonusPercent: null,
+        });
+      } finally {
+        if (mounted) setRatesLoading(false);
+      }
+    };
+
+    loadRates();
+    const interval = setInterval(loadRates, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const formatInr = (value) => `₹${Number(value).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
   return (
-    <div className="w-full space-y-3 sm:space-y-4 pb-24 sm:pb-28">
+    <div className="w-full -mt-2 sm:-mt-3 space-y-3 sm:space-y-4 pb-24 sm:pb-28">
       {/* Hero Card */}
       <div className="relative rounded-lg sm:rounded-xl overflow-hidden shadow-lg border">
         <img
@@ -32,6 +70,33 @@ export default function Home() {
             <span className="sm:hidden">make your life better</span>
             <span className="hidden sm:inline">make your life better</span>
           </p>
+        </div>
+      </div>
+
+      {/* Live Price Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white border border-amber-200 shadow-lg rounded-lg sm:rounded-xl p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500">Binance Rate</p>
+          <p className="mt-1 text-lg sm:text-xl font-bold text-amber-700">
+            {ratesLoading ? "Loading..." : rates.binancePrice !== null ? formatInr(rates.binancePrice) : "N/A"}
+          </p>
+          <p className="text-[11px] sm:text-xs text-gray-500 mt-1">USDT/INR</p>
+        </div>
+
+        <div className="bg-white border border-blue-200 shadow-lg rounded-lg sm:rounded-xl p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500">WazirX Rate</p>
+          <p className="mt-1 text-lg sm:text-xl font-bold text-blue-700">
+            {ratesLoading ? "Loading..." : rates.waziraxPrice !== null ? formatInr(rates.waziraxPrice) : "N/A"}
+          </p>
+          <p className="text-[11px] sm:text-xs text-gray-500 mt-1">USDT/INR</p>
+        </div>
+
+        <div className="bg-white border border-green-200 shadow-lg rounded-lg sm:rounded-xl p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500">INR Bonus</p>
+          <p className="mt-1 text-lg sm:text-xl font-bold text-green-700">
+            {ratesLoading ? "Loading..." : rates.inrBonusPercent !== null ? `${rates.inrBonusPercent}%` : "N/A"}
+          </p>
+          <p className="text-[11px] sm:text-xs text-gray-500 mt-1">On eligible transactions</p>
         </div>
       </div>
 

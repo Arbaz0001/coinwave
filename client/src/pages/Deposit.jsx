@@ -188,6 +188,24 @@ const Deposit = () => {
                 className="w-40 h-40 object-contain rounded-md border"
               />
             </div>
+            {qr.upiId && (
+              <div className="w-full p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">UPI ID:</p>
+                <p className="text-sm font-mono break-all text-blue-600">
+                  {qr.upiId}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(qr.upiId);
+                    toast.success("✅ UPI ID copied!");
+                  }}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-700 underline"
+                >
+                  Copy UPI ID
+                </button>
+              </div>
+            )}
             {qr.title && <p className="text-sm text-gray-600">{qr.title}</p>}
           </>
         ) : (

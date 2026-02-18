@@ -35,6 +35,8 @@ import ExchangePrices from "./components/ExchangePrices";
 import ExchangeHistory from "./pages/ExchangeHistory";
 import Statement from "./pages/Statement";
 import BankAccountPage from "./pages/BankAccountPage";
+import Investment from "./pages/Investment";
+import MyInvestments from "./pages/MyInvestments";
 
 export default function App() {
   const [showSupport, setShowSupport] = useState(false);
@@ -184,6 +186,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <BankAccountPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/investment"
+            element={
+              <ProtectedRoute>
+                <Investment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-investments"
+            element={
+              <ProtectedRoute>
+                <MyInvestments />
               </ProtectedRoute>
             }
           />

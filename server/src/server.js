@@ -31,8 +31,10 @@ import sellNotificationRoutes from "./routes/sellNotificationRoutes.js";
 import referAmountRoutes from "./routes/referAmountRoutes.js";
 import sellRoutes from "./routes/sellRoutes.js";
 import bankAccountRoutes from "./routes/bankAccountRoutes.js";
+import adminBankAccountRoutes from "./routes/adminBankAccountRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
+import investmentRoutes from "./routes/investmentRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -77,7 +79,7 @@ app.use(
     origin: ["http://localhost:5173", "http://localhost:5174", "https://admin.coinpay0.com","https://api.coinpay0.com","https://coinpay0.com"], // user + admin frontends
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   })
 );
 
@@ -117,8 +119,10 @@ app.use("/api/sell-notification", sellNotificationRoutes);
 app.use("/api/sell", sellRoutes);
 app.use("/api/v1", referAmountRoutes);
 app.use("/api/bank-accounts", bankAccountRoutes);
+app.use("/api/admin/bank-accounts", adminBankAccountRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/exchange-rates", exchangeRateRoutes);
+app.use("/api", investmentRoutes);
 
 // ✅ Static file serving for uploads: /uploads/filename
 // This allows frontend to load images like /uploads/qr-1234567.png

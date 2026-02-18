@@ -9,9 +9,12 @@ export const createQrCode = async (req, res, next) => {
       });
     }
 
+    const { upiId } = req.body;
+
     const qr = await QrCode.create({
       imageUrl: `/uploads/${req.file.filename}`,
       type: "UPI",
+      upiId: upiId || null,
     });
 
     res.status(201).json({

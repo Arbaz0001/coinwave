@@ -6,6 +6,32 @@ import { Save, Loader, RefreshCw, AlertCircle } from "lucide-react";
 import axios from "axios";
 import { API_CONFIG } from "../config/api.config";
 
+const decodeJwtPayload = (token) => {
+  try {
+    const parts = token?.split(".");
+    if (!parts || parts.length < 2) return null;
+    return JSON.parse(atob(parts[1]));
+  } catch {
+    return null;
+  }
+};
+
+const isJwtInvalidOrExpired = (token) => {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return true;
+  const exp = payload?.exp;
+  if (!exp) return true;
+  return Date.now() >= exp * 1000;
+};
+
+const clearAdminSessionStorage = () => {
+  localStorage.removeItem("adminAuth");
+  localStorage.removeItem("admin_token");
+  localStorage.removeItem("adminToken");
+  localStorage.removeItem("cw_admin");
+  localStorage.removeItem("cw_admin_token");
+};
+
 const SettingsManager = () => {
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
@@ -21,8 +47,6 @@ const SettingsManager = () => {
       localStorage.getItem("admin_token"),
       localStorage.getItem("cw_admin_token"),
       localStorage.getItem("adminToken"),
-      localStorage.getItem("authToken"),
-      localStorage.getItem("token"),
     ];
 
     try {
@@ -30,22 +54,38 @@ const SettingsManager = () => {
       if (rawAdminAuth) {
         const parsed = JSON.parse(rawAdminAuth);
         if (parsed?.accessToken) {
-          candidates.unshift(parsed.accessToken);
+          candidates.push(parsed.accessToken);
         }
       }
     } catch {
       // ignore malformed adminAuth
     }
 
-    const token = candidates.find(
-      (candidate) =>
-        typeof candidate === "string" &&
-        candidate.trim() !== "" &&
-        candidate !== "null" &&
-        candidate !== "undefined"
-    );
+    const normalizedCandidates = candidates
+      .filter(
+        (candidate) =>
+          typeof candidate === "string" &&
+          candidate.trim() !== "" &&
+          candidate !== "null" &&
+          candidate !== "undefined"
+      )
+      .map((candidate) =>
+        candidate
+          .trim()
+          .replace(/^Bearer\s+/i, "")
+          .replace(/^Bearer\s+/i, "")
+          .replace(/^"/, "")
+          .replace(/"$/, "")
+      );
 
-    return token || null;
+    const validToken = normalizedCandidates.find((candidate) => !isJwtInvalidOrExpired(candidate));
+
+    if (!validToken) {
+      clearAdminSessionStorage();
+      return null;
+    }
+
+    return validToken;
   };
 
   const getAuthHeaders = () => {
@@ -180,13 +220,20 @@ const SettingsManager = () => {
 
     try {
       const token = getAdminToken();
+      console.log("🔍 [SettingsManager] Retrieved token:", token ? `${token.substring(0, 30)}...` : "NULL");
+      
       if (!token) {
         setMessage({
           type: "error",
           text: "Admin authentication required. Please login again.",
         });
+        setSaving(false);
         return;
       }
+
+      const headers = getAuthHeaders();
+      console.log("🔍 [SettingsManager] Request headers:", headers);
+      console.log("🔍 [SettingsManager] API URL:", `${API_BASE_URL}/api/settings/admin/bulk-update`);
 
       // Convert to array format for bulk update
       const settingsArray = Object.entries(editedValues).map(([key, value]) => ({
@@ -198,7 +245,7 @@ const SettingsManager = () => {
         `${API_BASE_URL}/api/settings/admin/bulk-update`,
         { settings: settingsArray },
         {
-          headers: getAuthHeaders(),
+          headers,
         }
       );
 
@@ -216,9 +263,15 @@ const SettingsManager = () => {
       }
     } catch (error) {
       console.error("Error saving settings:", error);
+      if (error.response?.status === 401) {
+        clearAdminSessionStorage();
+      }
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to save settings",
+        text:
+          error.response?.status === 401
+            ? "Session expired or invalid. Please login again."
+            : error.response?.data?.message || "Failed to save settings",
       });
     } finally {
       setSaving(false);

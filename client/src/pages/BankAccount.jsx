@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
 import { API_CONFIG } from "../config/api.config";
-import { Loader2, CreditCard, Building2, Hash, User } from "lucide-react";
+import { Loader2, CreditCard, Building2, Hash, User, Plus } from "lucide-react";
 
 export default function BankAccount() {
+  const navigate = useNavigate();
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,9 +48,22 @@ export default function BankAccount() {
 
   return (
     <div className="p-4 min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">
-          💳 Bank Account Details
+      <didiv className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">
+            💳 Payment Methods
+          </h1>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate("/bank-account-manager")}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+          >
+            <Plus size={20} />
+            Add Bank Account
+          </button>
+        </div Bank Account Details
         </h1>
 
         {error && (
@@ -123,6 +138,21 @@ export default function BankAccount() {
                   </p>
                 </div>
               </div>
+
+              {/* UPI ID */}
+              {account.upiId && (
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 mb-1">UPI ID</p>
+                    <p className="text-blue-600 font-semibold text-lg font-mono">
+                      {account.upiId}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">

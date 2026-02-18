@@ -59,7 +59,7 @@ export const getSetting = async (req, res) => {
 export const updateSetting = async (req, res) => {
   try {
     const adminId = req.user?._id || req.user?.id;
-    if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
+    if (!adminId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
@@ -102,7 +102,7 @@ export const updateSetting = async (req, res) => {
         key,
         value: numValue,
         description: description || "",
-        updatedBy: new mongoose.Types.ObjectId(adminId),
+        updatedBy: adminId,
       });
     } else {
       // Update existing setting
@@ -110,7 +110,7 @@ export const updateSetting = async (req, res) => {
       if (description !== undefined) {
         setting.description = description;
       }
-      setting.updatedBy = new mongoose.Types.ObjectId(adminId);
+      setting.updatedBy = adminId;
       setting.lastUpdated = new Date();
     }
 
@@ -135,9 +135,12 @@ export const updateSetting = async (req, res) => {
 export const bulkUpdateSettings = async (req, res) => {
   try {
     const adminId = req.user?._id || req.user?.id;
-    if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
+    console.log("💾 [bulkUpdateSettings] adminId:", adminId);
+    if (!adminId) {
+      console.log("🔴 [bulkUpdateSettings] No adminId - sending 401");
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
+    console.log("✅ [bulkUpdateSettings] Admin authorized, processing settings");
 
     const { settings: updatedSettings } = req.body;
 
@@ -169,14 +172,14 @@ export const bulkUpdateSettings = async (req, res) => {
           key,
           value: numValue,
           description: description || "",
-          updatedBy: new mongoose.Types.ObjectId(adminId),
+          updatedBy: adminId,
         });
       } else {
         setting.value = numValue;
         if (description !== undefined) {
           setting.description = description;
         }
-        setting.updatedBy = new mongoose.Types.ObjectId(adminId);
+        setting.updatedBy = adminId;
         setting.lastUpdated = new Date();
       }
 

@@ -520,85 +520,97 @@ const getUserStatement = async (req, res) => {
     }
 
     const Transaction = (await import("../models/Transaction.js")).default;
-    const transactions = await Transaction.find({ userId })
-      .select("amount transactionType status type createdAt")
-      .sort({ createdAt: -1 })
-      .lean();
+    const Deposit = (await import("../models/Deposit.js")).default;
+    const Withdraw = (await import("../models/Withdraw.js")).default;
+    const Wallet = (await import("../models/Wallet.js")).default;
 
-    let formattedTransactions = transactions.map((transaction) => ({
-      id: transaction._id,
-      type: transaction.transactionType,
-      amount: Number(transaction.amount || 0),
-      status: transaction.status === "success" ? "completed" : transaction.status,
-      method: transaction.type === "upi" ? "UPI" : "Crypto",
-      date: transaction.createdAt,
-      reference: transaction._id,
+    // Fetch all data sources in parallel
+    const [transactions, deposits, withdraws, wallet] = await Promise.all([
+      Transaction.find({ userId })
+        .select("amount transactionType status type details createdAt")
+        .sort({ createdAt: -1 })
+        .lean(),
+      Deposit.find({ userId, status: "approved" })
+        .select("amount status method upiDetails.transactionId cryptoDetails.transactionHash createdAt")
+        .lean(),
+      Withdraw.find({ userId })
+        .select("amount status method details.transactionHash createdAt")
+        .lean(),
+      Wallet.findOne({ userId }).select("balance").lean(),
+    ]);
+
+    // Format Transaction model entries
+    const formattedTransactions = transactions.map((transaction) => {
+      const isBonus = transaction.details?.utr?.startsWith("BONUS-");
+      return {
+        id: transaction._id,
+        type: transaction.transactionType,
+        amount: Number(transaction.amount || 0),
+        status: transaction.status === "success" ? "completed" : transaction.status,
+        method: isBonus ? "Bonus 🎁" : (transaction.type === "upi" ? "UPI" : "Crypto"),
+        date: transaction.createdAt,
+        reference: isBonus ? transaction.details.utr : transaction._id,
+      };
+    });
+
+    // Format Deposit model entries
+    const depositTransactions = deposits.map((deposit) => ({
+      id: deposit._id,
+      type: "deposit",
+      amount: Number(deposit.amount || 0),
+      status: "completed",
+      method: deposit.method || "Deposit",
+      date: deposit.createdAt,
+      reference:
+        deposit?.upiDetails?.transactionId ||
+        deposit?.cryptoDetails?.transactionHash ||
+        deposit._id,
     }));
 
-    if (formattedTransactions.length === 0) {
-      const Deposit = (await import("../models/Deposit.js")).default;
-      const Withdraw = (await import("../models/Withdraw.js")).default;
+    // Format Withdraw model entries
+    const withdrawTransactions = withdraws.map((withdraw) => ({
+      id: withdraw._id,
+      type: "withdraw",
+      amount: Number(withdraw.amount || 0),
+      status: withdraw.status === "approved" ? "completed" : withdraw.status,
+      method: withdraw.method || "Withdraw",
+      date: withdraw.createdAt,
+      reference: withdraw?.details?.transactionHash || withdraw._id,
+    }));
 
-      const [deposits, withdraws] = await Promise.all([
-        Deposit.find({ userId })
-          .select("amount status method upiDetails.transactionId cryptoDetails.transactionHash createdAt")
-          .lean(),
-        Withdraw.find({ userId })
-          .select("amount status method details.transactionHash createdAt")
-          .lean(),
-      ]);
+    // Merge all transactions and sort by date
+    const allTransactions = [
+      ...formattedTransactions,
+      ...depositTransactions,
+      ...withdrawTransactions,
+    ].sort((first, second) => new Date(second.date) - new Date(first.date));
 
-      const depositTransactions = deposits.map((deposit) => ({
-        id: deposit._id,
-        type: "deposit",
-        amount: Number(deposit.amount || 0),
-        status: deposit.status === "approved" ? "completed" : deposit.status,
-        method: deposit.method || "Deposit",
-        date: deposit.createdAt,
-        reference:
-          deposit?.upiDetails?.transactionId ||
-          deposit?.cryptoDetails?.transactionHash ||
-          deposit._id,
-      }));
-
-      const withdrawTransactions = withdraws.map((withdraw) => ({
-        id: withdraw._id,
-        type: "withdraw",
-        amount: Number(withdraw.amount || 0),
-        status: withdraw.status === "approved" ? "completed" : withdraw.status,
-        method: withdraw.method || "Withdraw",
-        date: withdraw.createdAt,
-        reference: withdraw?.details?.transactionHash || withdraw._id,
-      }));
-
-      formattedTransactions = [...depositTransactions, ...withdrawTransactions].sort(
-        (first, second) => new Date(second.date) - new Date(first.date)
-      );
-    }
-
-    const totalDeposits = formattedTransactions
+    const totalDeposits = allTransactions
       .filter(
         (transaction) =>
           transaction.type === "deposit" && ["success", "approved", "completed"].includes(transaction.status)
       )
       .reduce((sum, transaction) => sum + (transaction.amount || 0), 0);
 
-    const totalWithdrawals = formattedTransactions
+    const totalWithdrawals = allTransactions
       .filter(
         (transaction) =>
           transaction.type === "withdraw" && ["success", "approved", "completed"].includes(transaction.status)
       )
       .reduce((sum, transaction) => sum + (transaction.amount || 0), 0);
 
+    // Get actual wallet balance
+    const currentBalance = wallet?.balance || 0;
+
     return res.status(200).json({
       success: true,
       data: {
-        transactions: formattedTransactions,
+        transactions: allTransactions,
         summary: {
           totalDeposits,
           totalWithdrawals,
-          netBalance: totalDeposits - totalWithdrawals,
-          totalTransactions: formattedTransactions.length,
+          netBalance: currentBalance,
+          totalTransactions: allTransactions.length,
         },
       },
     });

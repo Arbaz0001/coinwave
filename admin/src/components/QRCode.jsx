@@ -12,6 +12,7 @@ const QRCode = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [qrCodes, setQrCodes] = useState([]);
+  const [upiId, setUpiId] = useState("");
   const inputRef = useRef(null);
 
   // ✅ Fetch existing QR Codes
@@ -58,6 +59,7 @@ const QRCode = () => {
   const handleRemoveImage = () => {
     setQrImage(null);
     setPreview(null);
+    setUpiId("");
     if (inputRef.current) inputRef.current.value = null;
   };
 
@@ -94,6 +96,9 @@ const QRCode = () => {
       const formData = new FormData();
       formData.append("image", qrImage); // ✅ Field name fixed
       formData.append("type", "UPI");
+      if (upiId.trim()) {
+        formData.append("upiId", upiId.trim());
+      }
 
       const res = await fetch(`${API_BASE}/qrcode/qr`, {
         method: "POST",
@@ -182,6 +187,23 @@ const QRCode = () => {
               </div>
             )}
 
+            {/* UPI ID Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                UPI ID (Optional)
+              </label>
+              <input
+                type="text"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="e.g., username@paytm, 9876543210@upi"
+                className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                This will be displayed to users along with the QR code
+              </p>
+            </div>
+
             {/* Save Button */}
             <button
               type="submit"
@@ -212,6 +234,12 @@ const QRCode = () => {
                        alt={qr.title}
                          className="w-auto object-contain mb-2"
                      />
+                {qr.upiId && (
+                  <div className="w-full mt-3 p-3 bg-gray-700 rounded-lg">
+                    <p className="text-xs text-gray-400 mb-1">UPI ID:</p>
+                    <p className="text-sm font-mono text-blue-400 break-all">{qr.upiId}</p>
+                  </div>
+                )}
 
                 <button
                   onClick={() => handleDelete(qr._id)}

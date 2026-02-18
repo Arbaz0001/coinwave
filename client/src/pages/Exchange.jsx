@@ -65,11 +65,7 @@ export default function Exchange() {
         <p className="text-xs md:text-sm text-gray-400">Admin defined platform price</p>
 
         <div className="mt-4 md:mt-6 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl p-3 md:p-4">
-          <div className="grid grid-cols-2 gap-2 md:gap-3 text-sm font-medium text-center">
-            <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm">
-              <p className="text-gray-500 text-xs md:text-sm">Exchange($)</p>
-              <p className="text-sm md:text-base">-123.41</p>
-            </div>
+          <div className="grid grid-cols-1 gap-2 md:gap-3 text-sm font-medium text-center">
             <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm">
               <p className="text-gray-500 text-xs md:text-sm">Price(₹)</p>
               <p className="text-blue-600 text-sm md:text-base">{platformPrice.toFixed(2)}</p>

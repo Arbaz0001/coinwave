@@ -14,16 +14,57 @@ const API = axios.create({
 });
 
 // ----------------- TOKEN HELPER -----------------
+const decodeJwtPayload = (token) => {
+  try {
+    const parts = token?.split(".");
+    if (!parts || parts.length < 2) return null;
+    return JSON.parse(atob(parts[1]));
+  } catch {
+    return null;
+  }
+};
+
+const isJwtInvalidOrExpired = (token) => {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return true;
+  const exp = payload?.exp;
+  if (!exp) return true;
+  return Date.now() >= exp * 1000;
+};
+
 const getAdminToken = () => {
-  const raw = localStorage.getItem("adminAuth");
-  if (!raw) return null;
+  const candidates = [
+    localStorage.getItem("admin_token"),
+    localStorage.getItem("adminToken"),
+    localStorage.getItem("cw_admin_token"),
+  ];
 
   try {
-    const parsed = JSON.parse(raw);
-    return parsed?.accessToken || null;
+    const raw = localStorage.getItem("adminAuth");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.accessToken) {
+        candidates.push(parsed.accessToken);
+      }
+    }
   } catch {
-    return raw;
+    // ignore malformed adminAuth
   }
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "string") continue;
+    const normalized = candidate
+      .trim()
+      .replace(/^Bearer\s+/i, "")
+      .replace(/^Bearer\s+/i, "")
+      .replace(/^"/, "")
+      .replace(/"$/, "");
+
+    if (!normalized || isJwtInvalidOrExpired(normalized)) continue;
+    return normalized;
+  }
+
+  return null;
 };
 
 // ----------------- INTERCEPTOR -----------------

@@ -7,6 +7,8 @@ import Deposit from "../models/Deposit.js";
 import QrCode from "../models/QrCode.js";
 import QrCrypto from "../models/QrCrypto.js";
 import Wallet from "../models/Wallet.js";
+import ExchangeRate from "../models/ExchangeRate.js";
+import Transaction from "../models/Transaction.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -274,26 +276,61 @@ export const approveDepositRequest = async (req, res) => {
     if (remarks) deposit.remarks = remarks;
     await deposit.save();
 
-    // Update wallet
-    let wallet = await Wallet.findOne({ userId: deposit.userId });
-    if (!wallet) {
-      wallet = await Wallet.create({ userId: deposit.userId, balance: 0 });
-    }
-    const amountToAdd = Number(deposit.amount);
-    if (!Number.isFinite(amountToAdd)) {
+    // Get bonus percentage from ExchangeRate
+    let exchangeRate = await ExchangeRate.findOne();
+    const inrBonusPercent = exchangeRate?.inrBonusPercent || 0;
+    
+    // Calculate amounts
+    const depositAmount = Number(deposit.amount);
+    if (!Number.isFinite(depositAmount)) {
       return res.status(400).json({
         success: false,
         message: "Invalid deposit amount",
       });
     }
-    wallet.balance += amountToAdd;
+    
+    const bonusAmount = Math.floor((depositAmount * inrBonusPercent) / 100);
+    const totalAmount = depositAmount + bonusAmount;
+
+    // Update wallet with deposit + bonus
+    let wallet = await Wallet.findOne({ userId: deposit.userId });
+    if (!wallet) {
+      wallet = await Wallet.create({ userId: deposit.userId, balance: 0 });
+    }
+    wallet.balance += totalAmount;
     await wallet.save();
 
-    // Create notification
+    // Create bonus transaction record for statement
+    if (bonusAmount > 0) {
+      try {
+        await Transaction.create({
+          userId: deposit.userId,
+          type: "upi",
+          transactionType: "deposit",
+          amount: bonusAmount,
+          status: "success",
+          details: {
+            utr: `BONUS-${depositId}`,
+          },
+          approvedBy: adminObjectId,
+        });
+        console.log(`💰 Bonus transaction created: ₹${bonusAmount} (${inrBonusPercent}% of ₹${depositAmount})`);
+      } catch (bonusError) {
+        console.error("❌ Bonus transaction creation error:", bonusError.message || bonusError);
+        // Don't fail approval if bonus transaction fails
+      }
+    }
+
+    // Create notification with bonus info
     try {
+      let notificationMessage = `Your deposit of ₹${depositAmount} (${deposit.method}) has been approved!`;
+      if (bonusAmount > 0) {
+        notificationMessage += ` 🎁 You received ₹${bonusAmount} bonus (${inrBonusPercent}%)! Total credited: ₹${totalAmount}`;
+      }
+      
       await Notification.create({
-        title: "Deposit Approved ✅",
-        message: `Your deposit of ₹${deposit.amount} (${deposit.method}) has been approved!`,
+        title: bonusAmount > 0 ? "Deposit Approved + Bonus! 🎉" : "Deposit Approved ✅",
+        message: notificationMessage,
         userId: deposit.userId,
         createdBy: adminObjectId || null,
       });
@@ -302,12 +339,21 @@ export const approveDepositRequest = async (req, res) => {
       // don't fail approval if notification fails
     }
 
-    console.log(`✅ Deposit ${depositId} approved. Wallet updated.`);
+    console.log(`✅ Deposit ${depositId} approved. Amount: ₹${depositAmount}, Bonus: ₹${bonusAmount}, Total: ₹${totalAmount}`);
 
     return res.json({
       success: true,
-      message: "Deposit approved successfully",
-      data: deposit,
+      message: bonusAmount > 0 
+        ? `Deposit approved! ₹${depositAmount} + ₹${bonusAmount} bonus = ₹${totalAmount} credited`
+        : "Deposit approved successfully",
+      data: {
+        deposit,
+        bonus: {
+          percentage: inrBonusPercent,
+          amount: bonusAmount,
+          total: totalAmount,
+        },
+      },
     });
   } catch (err) {
     console.error("❌ approveDepositRequest error:", err.message || err);

@@ -89,20 +89,23 @@ export default function SellNotificationPage(){
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <div className="w-full md:w-80 bg-slate-800 md:border-r border-slate-700 md:h-screen md:sticky md:top-0">
-        <div className="p-4 border-b border-slate-700 flex items-center gap-3 justify-between">
-          <div className="text-slate-300 text-sm">User Selection</div>
+    <div className="h-[84vh] lg:h-[90vh] min-h-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col lg:flex-row overflow-y-auto">
+      {/* Sidebar - Fixed height with internal scroll */}
+      <div className="w-full lg:w-80 xl:w-96 bg-slate-800 border-b lg:border-b-0 lg:border-r border-slate-700 flex flex-col min-h-0 max-h-[40vh] lg:max-h-none">
+        <div className="p-3 sm:p-4 border-b border-slate-700 flex items-center gap-2 sm:gap-3 justify-between flex-shrink-0">
+          <div className="text-slate-300 text-xs sm:text-sm font-medium">User Selection</div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-300 flex items-center gap-2">
-              <input type="checkbox" checked={multiSelect} onChange={e=>setMultiSelect(e.target.checked)} className="w-4 h-4" />
-              <span>Multi-select</span>
+            <label className="text-xs text-slate-300 flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={multiSelect} onChange={e=>setMultiSelect(e.target.checked)} className="w-4 h-4 cursor-pointer" />
+              <span className="hidden sm:inline">Multi-select</span>
+              <span className="sm:hidden">Multi</span>
             </label>
           </div>
         </div>
 
-        <SellNotificationSidebar 
+        {/* Scrollable sidebar content */}
+        <div className="flex-1 min-h-0">
+          <SellNotificationSidebar 
           users={users} 
           selectedId={selectedUser?._id} 
           selectedIds={selectedUsers.map(u=>String(u._id))}
@@ -121,30 +124,31 @@ export default function SellNotificationPage(){
           }}
           collapsed={collapsed} 
           onToggle={()=>setCollapsed(s=>!s)} 
-        />
+          />
+        </div>
       </div>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="min-h-screen p-4 md:p-8 flex flex-col">
+      {/* Main Content - Scrollable */}
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="min-h-full p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col">
           {/* Top Alert */}
           {status && (
-            <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
+            <div className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row items-start gap-2 sm:gap-3 ${
               status.includes('✅') || !status.includes('❌')
                 ? 'bg-blue-900/30 border border-blue-600 text-blue-300'
                 : 'bg-red-900/30 border border-red-600 text-red-300'
             }`}>
-              <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm md:text-base font-medium">{status}</p>
+              <AlertCircle size={18} className="flex-shrink-0 mt-0.5 hidden sm:block" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm md:text-base font-medium break-words">{status}</p>
                 {isLoading && <p className="text-xs mt-1 opacity-75">Please wait...</p>}
               </div>
               {!isLoading && status.includes('Error') && (
                 <button 
                   onClick={() => fetchUsers()}
-                  className="flex-shrink-0 px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs md:text-sm transition"
+                  className="flex-shrink-0 w-full sm:w-auto px-3 py-1.5 sm:py-1 bg-red-600 hover:bg-red-700 rounded text-xs sm:text-sm transition flex items-center justify-center gap-1"
                 >
-                  <RefreshCw size={16} className="inline" /> Retry
+                  <RefreshCw size={14} /> Retry
                 </button>
               )}
             </div>
@@ -152,13 +156,13 @@ export default function SellNotificationPage(){
 
           {/* User Count */}
           {users.length > 0 && !status.includes('Error') && (
-            <div className="mb-4 text-slate-400 text-xs md:text-sm">
+            <div className="mb-3 sm:mb-4 text-slate-400 text-xs sm:text-sm">
               📊 Total Users: <span className="font-bold text-white">{users.length}</span>
             </div>
           )}
 
           {/* Form */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <CreateSellNotification 
               selectedUser={selectedUser}
               selectedUsers={selectedUsers}
@@ -172,7 +176,7 @@ export default function SellNotificationPage(){
           </div>
 
           {/* List Section */}
-          <div className="bg-slate-800/50 rounded-lg p-4 md:p-6 border border-slate-700">
+          <div className="bg-slate-800/50 rounded-lg p-3 sm:p-4 md:p-6 border border-slate-700 overflow-x-auto">
             <SellNotificationList key={refreshList} />
           </div>
         </div>

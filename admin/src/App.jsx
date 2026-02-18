@@ -18,9 +18,15 @@ import SupportSettings from "./components/SupportSettings";
 import TargetedPopupPage from "./pages/TargetedPopupPage";
 import SellNotificationPage from "./pages/SellNotificationPage";
 import BankAccountsManager from "./pages/BankAccountsManager";
+import AdminBankAccountPage from "./pages/AdminBankAccountPage";
 import SettingsManager from "./pages/SettingsManager";
 import ExchangePriceManager from "./pages/ExchangePriceManager";
 import AdminStatementManager from "./pages/AdminStatementManager";
+import AdminCreatePack from "./pages/AdminCreatePack";
+import AdminPackList from "./pages/AdminPackList";
+import AdminPurchaseRequests from "./pages/AdminPurchaseRequests";
+import AdminPaymentDetails from "./pages/AdminPaymentDetails";
+import AdminPackHistory from "./pages/AdminPackHistory";
 
 export default function App() {
   const { isLoggedIn, loading } = useAdminAuth();
@@ -35,8 +41,14 @@ export default function App() {
     { key: "allusers", label: "All Users", component: AllUsers },
     { key: "settings", label: "⚙️ Settings", component: SettingsManager },
     { key: "prices", label: "💱 Prices & Bonus", component: ExchangePriceManager },
+    { key: "createpack", label: "📦 Create Pack", component: AdminCreatePack },
+    { key: "packlist", label: "📋 All Packs", component: AdminPackList },
+    { key: "packrequests", label: "🧾 Purchase Requests", component: AdminPurchaseRequests },
+    { key: "packhistory", label: "📜 Pack History", component: AdminPackHistory },
+    { key: "packpayment", label: "💳 Payment Details", component: AdminPaymentDetails },
     { key: "statements", label: "📊 User Statements", component: AdminStatementManager },
-    { key: "bankaccounts", label: "🏦 Bank Accounts", component: BankAccountsManager },
+    { key: "adminbankaccounts", label: "🏦 My Bank Accounts", component: AdminBankAccountPage },
+    { key: "bankaccounts", label: "🏦 User Bank Accounts", component: BankAccountsManager },
     { key: "deposits", label: "Deposits", component: Deposits },
     { key: "withdrawals", label: "Withdrawals", component: Withdrawals },
     { key: "refer", label: "Refer Amount", component: ReferAmount },

@@ -117,6 +117,16 @@ const Withdrawals = () => {
                     <strong>Method:</strong> {w.method}
                   </p>
                   <p>
+                    <strong>Payment:</strong> 
+                    <span className={`ml-1 px-2 py-1 rounded text-xs font-semibold ${
+                      w.paymentMethod === "UPI" 
+                        ? "bg-purple-100 text-purple-700" 
+                        : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {w.paymentMethod === "UPI" ? "💳 UPI" : "🏦 Bank"}
+                    </span>
+                  </p>
+                  <p>
                     <strong>Amount:</strong> ₹{w.amount}
                   </p>
                   <p>
@@ -167,7 +177,31 @@ const Withdrawals = () => {
               {/* 🔹 Details Section */}
               {w.showDetails && (
                 <div className="p-4 bg-gray-50">
-                  <h4 className="font-semibold mb-2">Details</h4>
+                  <h4 className="font-semibold mb-3">Withdrawal Details</h4>
+                  
+                  {/* Payment Account Information */}
+                  {w.paymentMethod === "UPI" ? (
+                    <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <h5 className="font-semibold text-purple-900 mb-2">💳 UPI Account</h5>
+                      <div className="space-y-1 text-sm">
+                        <p><strong>UPI ID:</strong> <span className="font-mono text-purple-700">{w.upiId || "N/A"}</span></p>
+                      </div>
+                    </div>
+                  ) : w.bankAccountId ? (
+                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <h5 className="font-semibold text-blue-900 mb-2">🏦 Bank Account</h5>
+                      <div className="space-y-1 text-sm">
+                        <p><strong>Account Holder:</strong> {w.bankAccountId.accountHolderName}</p>
+                        <p><strong>Account Number:</strong> <span className="font-mono">{w.bankAccountId.accountNumber}</span></p>
+                        <p><strong>IFSC Code:</strong> <span className="font-mono">{w.bankAccountId.ifscCode}</span></p>
+                        <p><strong>Bank:</strong> {w.bankAccountId.bankName}</p>
+                        <p><strong>Type:</strong> {w.bankAccountId.accountType}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Other Details */}
+                  <h5 className="font-semibold mb-2">Additional Information</h5>
                   <ul className="list-disc pl-6 space-y-1 text-sm">
                     {Object.entries(w.details || {}).map(([key, val]) => (
                       <li key={key}>

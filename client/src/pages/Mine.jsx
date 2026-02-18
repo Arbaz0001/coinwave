@@ -11,6 +11,8 @@ import {
   History,
   FileText,
   Banknote,
+  Briefcase,
+  Wallet,
   LifeBuoy,
   LogOut,
 } from "lucide-react";
@@ -36,12 +38,13 @@ export default function Mine() {
 
     try {
       const parsedUser = JSON.parse(storedUser);
-      if (!parsedUser?._id) {
-        navigate("/login", { replace: true });
-      } else {
+      if (parsedUser?._id) {
         setUser(parsedUser);
+      } else {
+        navigate("/login", { replace: true });
       }
     } catch (err) {
+      console.error("Failed to parse cw_user from storage", err);
       localStorage.removeItem("cw_user");
       navigate("/login", { replace: true });
     }
@@ -119,6 +122,8 @@ export default function Mine() {
   // ✅ Navigation menu items
   const menu = [
     { title: "Invite", path: "/invite", icon: <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" /> },
+    { title: "Pack", path: "/investment", icon: <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" /> },
+    { title: "My Investments", path: "/my-investments", icon: <Wallet className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" /> },
     { title: "Exchange history", path: "/exchange-history", icon: <History className="w-5 h-5 md:w-6 md:h-6 text-green-600" /> },
     { title: "Statement", path: "/statement", icon: <FileText className="w-5 h-5 md:w-6 md:h-6 text-purple-600" /> },
     { title: "Bank account", path: "/bank-account", icon: <Banknote className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" /> },
@@ -190,18 +195,21 @@ export default function Mine() {
 
       {/* MENU */}
       <div className="mt-6 bg-white rounded-xl shadow-md divide-y">
-        {menu.map((item, idx) => (
-          <div
-            key={idx}
+        {menu.map((item) => (
+          <button
+            type="button"
+            key={item.path}
             onClick={() => navigate(item.path)}
-            className="flex justify-between items-center px-4 md:px-6 py-4 md:py-5 cursor-pointer hover:bg-gray-50 transition-colors"
+            className="w-full flex justify-between items-center px-4 md:px-6 py-4 md:py-5 cursor-pointer hover:bg-gray-50 transition-colors"
           >
-            <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0 pr-2">
               {item.icon}
-              <span className="text-gray-700 font-medium text-sm md:text-base">{item.title}</span>
+              <span className="text-gray-700 font-medium text-sm md:text-base text-left leading-snug break-words">
+                {item.title}
+              </span>
             </div>
-            <span className="text-gray-400">›</span>
-          </div>
+            <span className="text-gray-400 shrink-0">›</span>
+          </button>
         ))}
       </div>
 
